@@ -40,12 +40,13 @@ public class RegisterUserTests : IDisposable
         var handler = new RegisterUserCommandHandler(_context, _emailService);
 
         // Act
-        var resultId = await handler.Handle(command, CancellationToken.None);
+        var result = await handler.Handle(command, CancellationToken.None);
 
         // Assert
-        Assert.NotEqual(Guid.Empty, resultId);
+        Assert.NotEqual(Guid.Empty, result.Id);
+        Assert.NotNull(result.VerificationToken);
         
-        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == resultId);
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
         Assert.NotNull(user);
         Assert.Equal("john@example.com", user.Email);
         Assert.Equal("John Doe", user.FullName);

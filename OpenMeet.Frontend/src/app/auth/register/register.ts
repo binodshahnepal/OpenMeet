@@ -25,10 +25,12 @@ export class RegisterComponent {
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
   protected readonly successMessage = signal<string | null>(null);
+  protected readonly verificationLink = signal<string | null>(null);
 
   protected async onSubmit(): Promise<void> {
     this.errorMessage.set(null);
     this.successMessage.set(null);
+    this.verificationLink.set(null);
 
     // Client-side validation
     if (!this.fullName() || !this.email() || !this.password() || !this.confirmPassword()) {
@@ -55,10 +57,7 @@ export class RegisterComponent {
     }).subscribe({
       next: (response) => {
         this.isLoading.set(false);
-        this.successMessage.set('Registration successful! Redirecting to login...');
-        setTimeout(() => {
-          this.router.navigate(['/login']);
-        }, 2000);
+        this.verificationLink.set(`http://localhost:4200/verify-email?token=${response.verificationToken}`);
       },
       error: (err) => {
         this.isLoading.set(false);

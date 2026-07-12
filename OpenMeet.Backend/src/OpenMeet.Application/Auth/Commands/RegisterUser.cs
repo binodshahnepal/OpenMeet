@@ -11,7 +11,9 @@ using OpenMeet.Domain.Entities;
 
 namespace OpenMeet.Application.Auth.Commands;
 
-public record RegisterUserCommand(string Email, string Password, string FullName) : IRequest<Guid>;
+public record RegisterUserResult(Guid Id, string VerificationToken);
+
+public record RegisterUserCommand(string Email, string Password, string FullName) : IRequest<RegisterUserResult>;
 
 public class RegisterUserCommandValidator : AbstractValidator<RegisterUserCommand>
 {
@@ -31,7 +33,7 @@ public class RegisterUserCommandValidator : AbstractValidator<RegisterUserComman
     }
 }
 
-public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Guid>
+public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, RegisterUserResult>
 {
     private readonly IApplicationDbContext _context;
     private readonly IEmailService _emailService;
@@ -42,7 +44,7 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, G
         _emailService = emailService;
     }
 
-    public async Task<Guid> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
+    public async Task<RegisterUserResult> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
     {
         // Verify unique email (case-insensitive)
         var exists = await _context.Users
@@ -82,6 +84,6 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, G
 
         await _emailService.SendEmailAsync(user.Email, "Verify your OpenMeet Account", emailBody);
 
-        return user.Id;
+        return new RegisterUserResult(user.Id, token);
     }
 }

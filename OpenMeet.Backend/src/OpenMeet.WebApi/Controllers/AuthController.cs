@@ -22,8 +22,8 @@ public class AuthController : ControllerBase
     {
         try
         {
-            var userId = await _mediator.Send(command);
-            return Ok(new { id = userId, message = "Registration successful" });
+            var result = await _mediator.Send(command);
+            return Ok(new { id = result.Id, verificationToken = result.VerificationToken, message = "Registration successful" });
         }
         catch (InvalidOperationException ex)
         {
