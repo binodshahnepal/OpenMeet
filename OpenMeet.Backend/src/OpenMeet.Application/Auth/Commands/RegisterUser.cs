@@ -70,19 +70,52 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, R
             EmailVerificationTokenExpires = DateTime.UtcNow.AddHours(24)
         };
 
-        _context.Users.Add(user);
-        await _context.SaveChangesAsync(cancellationToken);
+        var isRelational = _context is DbContext dbContext && dbContext.Database.ProviderName != "Microsoft.EntityFrameworkCore.InMemory";
 
-        // Dispatch verification email
-        var verificationUrl = $"http://localhost:4200/verify-email?token={token}";
-        var emailBody = $@"
-            <h2>Welcome to OpenMeet, {user.FullName}!</h2>
-            <p>Please verify your email address to complete your registration by clicking the link below:</p>
-            <p><a href=""{verificationUrl}"">{verificationUrl}</a></p>
-            <p>This link is valid for 24 hours.</p>
-            <p>Best regards,<br/>The OpenMeet Team</p>";
+        if (isRelational)
+        {
+            var relationalDb = (DbContext)_context;
+            using var transaction = await relationalDb.Database.BeginTransactionAsync(cancellationToken);
+            try
+            {
+                _context.Users.Add(user);
+                await _context.SaveChangesAsync(cancellationToken);
 
-        await _emailService.SendEmailAsync(user.Email, "Verify your OpenMeet Account", emailBody);
+                // Dispatch verification email
+                var verificationUrl = $"http://localhost:4200/verify-email?token={token}";
+                var emailBody = $@"
+                    <h2>Welcome to OpenMeet, {user.FullName}!</h2>
+                    <p>Please verify your email address to complete your registration by clicking the link below:</p>
+                    <p><a href=""{verificationUrl}"">{verificationUrl}</a></p>
+                    <p>This link is valid for 24 hours.</p>
+                    <p>Best regards,<br/>The OpenMeet Team</p>";
+
+                await _emailService.SendEmailAsync(user.Email, "Verify your OpenMeet Account", emailBody);
+
+                await transaction.CommitAsync(cancellationToken);
+            }
+            catch
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                throw;
+            }
+        }
+        else
+        {
+            _context.Users.Add(user);
+            await _context.SaveChangesAsync(cancellationToken);
+
+            // Dispatch verification email
+            var verificationUrl = $"http://localhost:4200/verify-email?token={token}";
+            var emailBody = $@"
+                <h2>Welcome to OpenMeet, {user.FullName}!</h2>
+                <p>Please verify your email address to complete your registration by clicking the link below:</p>
+                <p><a href=""{verificationUrl}"">{verificationUrl}</a></p>
+                <p>This link is valid for 24 hours.</p>
+                <p>Best regards,<br/>The OpenMeet Team</p>";
+
+            await _emailService.SendEmailAsync(user.Email, "Verify your OpenMeet Account", emailBody);
+        }
 
         return new RegisterUserResult(user.Id, token);
     }
