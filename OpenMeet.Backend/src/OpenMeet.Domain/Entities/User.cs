@@ -11,4 +11,7 @@ public class User : Entity
     public string Role { get; set; } = "User"; // E.g., User, Admin
     public bool IsMfaEnabled { get; set; }
     public string? MfaSecret { get; set; }
+    public bool IsEmailVerified { get; set; }
+    public string? EmailVerificationToken { get; set; }
+    public DateTime? EmailVerificationTokenExpires { get; set; }
 }

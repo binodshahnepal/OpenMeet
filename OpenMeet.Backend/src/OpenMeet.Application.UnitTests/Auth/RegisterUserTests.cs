@@ -2,7 +2,9 @@ using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using NSubstitute;
 using OpenMeet.Application.Auth.Commands;
+using OpenMeet.Application.Common.Interfaces;
 using OpenMeet.Application.Common.Security;
 using OpenMeet.Domain.Entities;
 using OpenMeet.Infrastructure.Persistence;
@@ -13,6 +15,7 @@ namespace OpenMeet.Application.UnitTests.Auth;
 public class RegisterUserTests : IDisposable
 {
     private readonly ApplicationDbContext _context;
+    private readonly IEmailService _emailService = Substitute.For<IEmailService>();
 
     public RegisterUserTests()
     {
@@ -34,7 +37,7 @@ public class RegisterUserTests : IDisposable
     {
         // Arrange
         var command = new RegisterUserCommand("john@example.com", "Password123", "John Doe");
-        var handler = new RegisterUserCommandHandler(_context);
+        var handler = new RegisterUserCommandHandler(_context, _emailService);
 
         // Act
         var resultId = await handler.Handle(command, CancellationToken.None);
@@ -47,7 +50,15 @@ public class RegisterUserTests : IDisposable
         Assert.Equal("john@example.com", user.Email);
         Assert.Equal("John Doe", user.FullName);
         Assert.Equal("User", user.Role);
+        Assert.False(user.IsEmailVerified);
+        Assert.NotNull(user.EmailVerificationToken);
         Assert.True(PasswordHasher.VerifyPassword("Password123", user.PasswordHash));
+
+        // Verify email service was called once
+        await _emailService.Received(1).SendEmailAsync(
+            user.Email,
+            Arg.Any<string>(),
+            Arg.Any<string>());
     }
 
     [Fact]
@@ -64,7 +75,7 @@ public class RegisterUserTests : IDisposable
         await _context.SaveChangesAsync();
 
         var command = new RegisterUserCommand("JOHN@example.com", "Password123", "John New");
-        var handler = new RegisterUserCommandHandler(_context);
+        var handler = new RegisterUserCommandHandler(_context, _emailService);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>

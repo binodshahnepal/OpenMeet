@@ -1,4 +1,5 @@
 using System;
+using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 using FluentValidation;
@@ -33,10 +34,12 @@ public class RegisterUserCommandValidator : AbstractValidator<RegisterUserComman
 public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, Guid>
 {
     private readonly IApplicationDbContext _context;
+    private readonly IEmailService _emailService;
 
-    public RegisterUserCommandHandler(IApplicationDbContext context)
+    public RegisterUserCommandHandler(IApplicationDbContext context, IEmailService emailService)
     {
         _context = context;
+        _emailService = emailService;
     }
 
     public async Task<Guid> Handle(RegisterUserCommand request, CancellationToken cancellationToken)
@@ -50,17 +53,34 @@ public class RegisterUserCommandHandler : IRequestHandler<RegisterUserCommand, G
             throw new InvalidOperationException("A user with this email address already exists.");
         }
 
+        // Generate verification token (256-bit entropy)
+        var token = Convert.ToHexString(RandomNumberGenerator.GetBytes(32));
+
         var user = new User
         {
             Email = request.Email,
             PasswordHash = PasswordHasher.HashPassword(request.Password),
             FullName = request.FullName,
             Role = "User",
-            IsMfaEnabled = false
+            IsMfaEnabled = false,
+            IsEmailVerified = false,
+            EmailVerificationToken = token,
+            EmailVerificationTokenExpires = DateTime.UtcNow.AddHours(24)
         };
 
         _context.Users.Add(user);
         await _context.SaveChangesAsync(cancellationToken);
+
+        // Dispatch verification email
+        var verificationUrl = $"http://localhost:4200/verify-email?token={token}";
+        var emailBody = $@"
+            <h2>Welcome to OpenMeet, {user.FullName}!</h2>
+            <p>Please verify your email address to complete your registration by clicking the link below:</p>
+            <p><a href=""{verificationUrl}"">{verificationUrl}</a></p>
+            <p>This link is valid for 24 hours.</p>
+            <p>Best regards,<br/>The OpenMeet Team</p>";
+
+        await _emailService.SendEmailAsync(user.Email, "Verify your OpenMeet Account", emailBody);
 
         return user.Id;
     }

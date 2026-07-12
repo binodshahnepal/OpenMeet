@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMeet.Application.Common.Interfaces;
 using OpenMeet.Infrastructure.Persistence;
+using OpenMeet.Infrastructure.Services;
 
 namespace OpenMeet.Infrastructure;
 
@@ -18,6 +19,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
+        services.AddTransient<IEmailService, ConsoleEmailService>();
 
         return services;
     }
