@@ -19,7 +19,28 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
-        services.AddTransient<IEmailService, ConsoleEmailService>();
+        
+        var emailSection = configuration.GetSection("EmailSettings");
+        var emailSettings = new EmailSettings
+        {
+            Host = emailSection["Host"] ?? "",
+            Port = int.TryParse(emailSection["Port"], out var p) ? p : 587,
+            Username = emailSection["Username"] ?? "",
+            Password = emailSection["Password"] ?? "",
+            SenderEmail = emailSection["SenderEmail"] ?? "",
+            SenderName = emailSection["SenderName"] ?? ""
+        };
+
+        services.AddSingleton(Microsoft.Extensions.Options.Options.Create(emailSettings));
+
+        if (!string.IsNullOrEmpty(emailSettings.Host) && !emailSettings.Host.Contains("placeholder"))
+        {
+            services.AddTransient<IEmailService, SmtpEmailService>();
+        }
+        else
+        {
+            services.AddTransient<IEmailService, ConsoleEmailService>();
+        }
 
         return services;
     }
