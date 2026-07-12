@@ -1,0 +1,37 @@
+# -- dotnet ignore rules --
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+.vs/
+.idea/
+.vscode/
+App_Data/
+testresults/
+TestResults/
+*.local.settings.json
+
+# -- Node/Angular ignore rules --
+node_modules/
+.angular/
+dist/
+tmp/
+out/
+.env
+.env.*
+.sass-cache/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# -- OS / Editors --
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*~

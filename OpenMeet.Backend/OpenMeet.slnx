@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/OpenMeet.Application/OpenMeet.Application.csproj" />
+    <Project Path="src/OpenMeet.Domain/OpenMeet.Domain.csproj" />
+    <Project Path="src/OpenMeet.Infrastructure/OpenMeet.Infrastructure.csproj" />
+    <Project Path="src/OpenMeet.WebApi/OpenMeet.WebApi.csproj" />
+  </Folder>
+</Solution>
