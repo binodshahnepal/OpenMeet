@@ -73,6 +73,12 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
   protected readonly chatMessages = signal<ChatMessage[]>([]);
   protected chatInput: string = '';
 
+  // Mentions State
+  protected readonly showMentionsDropdown = signal(false);
+  protected readonly filteredParticipants = signal<string[]>([]);
+  protected selectedMentionIndex = 0;
+  protected readonly activeMentionToast = signal<string | null>(null);
+
   // Reactions State
   protected readonly floatingReactions = signal<(ReactionEvent & { id: number })[]>([]);
   protected readonly reactionOptions = [
@@ -151,6 +157,17 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
     this.subscriptions.add(
       this.signalRService.messageReceived$.subscribe((msg: ChatMessage) => {
         this.chatMessages.update(prev => [...prev, msg]);
+        
+        // Show notification toast if mentioned by another user
+        if (msg.senderName !== this.userName()) {
+          const mentionTag = `@${this.userName()}`;
+          if (msg.messageContent.includes(mentionTag)) {
+            this.activeMentionToast.set(`${msg.senderName} mentioned you!`);
+            setTimeout(() => {
+              this.activeMentionToast.set(null);
+            }, 4000);
+          }
+        }
       })
     );
 
@@ -407,6 +424,82 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
     }
     this.signalRService.sendMessage(this.roomCode(), email, this.userName(), this.chatInput);
     this.chatInput = '';
+    this.showMentionsDropdown.set(false);
+  }
+
+  protected onChatInputChange(): void {
+    const text = this.chatInput;
+    const match = text.match(/@(\w*)$/);
+    if (match) {
+      const query = match[1].toLowerCase();
+      const candidates = this.remoteParticipants()
+        .map(p => p.name)
+        .filter(name => name.toLowerCase().includes(query));
+      
+      if (candidates.length > 0) {
+        this.filteredParticipants.set(candidates);
+        this.showMentionsDropdown.set(true);
+        if (this.selectedMentionIndex >= candidates.length) {
+          this.selectedMentionIndex = 0;
+        }
+      } else {
+        this.showMentionsDropdown.set(false);
+      }
+    } else {
+      this.showMentionsDropdown.set(false);
+    }
+  }
+
+  protected handleChatInputKeyDown(event: KeyboardEvent): void {
+    if (this.showMentionsDropdown()) {
+      const candidates = this.filteredParticipants();
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        this.selectedMentionIndex = (this.selectedMentionIndex + 1) % candidates.length;
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        this.selectedMentionIndex = (this.selectedMentionIndex - 1 + candidates.length) % candidates.length;
+      } else if (event.key === 'Enter' || event.key === 'Tab') {
+        event.preventDefault();
+        this.selectMention(candidates[this.selectedMentionIndex]);
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        this.showMentionsDropdown.set(false);
+      }
+    }
+  }
+
+  protected selectMention(name: string): void {
+    const text = this.chatInput;
+    const updated = text.replace(/@\w*$/, `@${name} `);
+    this.chatInput = updated;
+    this.showMentionsDropdown.set(false);
+    this.selectedMentionIndex = 0;
+  }
+
+  protected formatMessageContent(content: string): string {
+    if (!content) return '';
+    let escaped = content
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+
+    const allNames = [this.userName(), ...this.remoteParticipants().map(p => p.name)];
+    for (const name of allNames) {
+      if (!name) continue;
+      const mentionRegex = new RegExp(`@${this.escapeRegex(name)}\\b`, 'g');
+      escaped = escaped.replace(
+        mentionRegex, 
+        `<span class="bg-purple-500/20 text-purple-300 font-semibold px-1.5 py-0.5 rounded border border-purple-500/30">@${name}</span>`
+      );
+    }
+    return escaped;
+  }
+
+  private escapeRegex(string: string): string {
+    return string.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
   }
 
   private loadChatHistory(): void {
