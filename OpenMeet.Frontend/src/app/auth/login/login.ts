@@ -51,6 +51,9 @@ export class LoginComponent {
         }));
 
         this.successMessage.set(`Welcome back, ${response.fullName}! Login successful.`);
+        setTimeout(() => {
+          this.router.navigate(['/lobby']);
+        }, 600);
       },
       error: (err) => {
         this.isLoading.set(false);
