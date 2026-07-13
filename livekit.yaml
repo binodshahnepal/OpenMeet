@@ -4,8 +4,8 @@ bind_addresses:
   - ""
 keys:
   # API Key: devkey
-  # API Secret: secretkey
-  devkey: "secretkey"
+  # API Secret: devsecretkey_openmeet_development_only_12345
+  devkey: "devsecretkey_openmeet_development_only_12345"
 logging:
   level: info
 rtc:
