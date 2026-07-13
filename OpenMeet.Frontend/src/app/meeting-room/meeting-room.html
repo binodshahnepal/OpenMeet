@@ -319,6 +319,27 @@
           </div>
         </div>
 
+        <!-- Record Meeting -->
+        <button
+          (click)="toggleRecording()"
+          [class.bg-red-600]="isRecording()"
+          [class.hover:bg-red-700]="isRecording()"
+          [class.animate-pulse]="isRecording()"
+          [class.bg-white/10]="!isRecording()"
+          [class.hover:bg-white/20]="!isRecording()"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          [title]="isRecording() ? 'Stop Recording' : 'Record Meeting'"
+        >
+          <!-- Recording (Stop) Icon -->
+          <svg *ngIf="isRecording()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <rect x="6" y="6" width="12" height="12" rx="1.5" fill="currentColor" />
+          </svg>
+          <!-- Not Recording (Record) Icon -->
+          <svg *ngIf="!isRecording()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="12" r="6" />
+          </svg>
+        </button>
+
         <!-- Separation Line -->
         <div class="h-8 w-px bg-white/10"></div>
 

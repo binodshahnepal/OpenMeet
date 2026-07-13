@@ -58,9 +58,13 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
   protected readonly sharedScreenTrack = signal<any | null>(null);
   protected readonly screenShareOwner = signal<string | null>(null);
 
-  // Remote participants list signal
   protected readonly remoteParticipants = signal<ParticipantState[]>([]);
   protected readonly copied = signal(false);
+  protected readonly isRecording = signal(false);
+
+  private mediaRecorder: MediaRecorder | null = null;
+  private recordingStream: MediaStream | null = null;
+  private recordedChunks: Blob[] = [];
 
   // Layout Panel Toggles
   protected readonly activePanel = signal<'chat' | 'participants' | 'whiteboard' | null>(null);
@@ -543,6 +547,123 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
     this.canvasContext.lineWidth = stroke.lineWidth;
     this.canvasContext.stroke();
     this.canvasContext.closePath();
+  }
+
+  // --- Browser Recording Methods ---
+  protected async toggleRecording(): Promise<void> {
+    if (this.isRecording()) {
+      this.stopRecording();
+    } else {
+      await this.startRecording();
+    }
+  }
+
+  private async startRecording(): Promise<void> {
+    try {
+      // 1. Capture screen/tab video and audio
+      const screenStream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true
+      });
+
+      // 2. Try to capture microphone audio to mix it in
+      let micStream: MediaStream | null = null;
+      try {
+        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (e) {
+        console.warn('Microphone access not granted for recording:', e);
+      }
+
+      // 3. Set up Audio mixing using Web Audio API
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      const audioContext = new AudioCtx();
+      const dest = audioContext.createMediaStreamDestination();
+      let hasAudio = false;
+
+      if (screenStream.getAudioTracks().length > 0) {
+        const source1 = audioContext.createMediaStreamSource(screenStream);
+        source1.connect(dest);
+        hasAudio = true;
+      }
+
+      if (micStream && micStream.getAudioTracks().length > 0) {
+        const source2 = audioContext.createMediaStreamSource(micStream);
+        source2.connect(dest);
+        hasAudio = true;
+      }
+
+      // 4. Combine the video track with the mixed audio track
+      let mixedStream = screenStream;
+      if (hasAudio) {
+        const combinedTracks = [
+          ...screenStream.getVideoTracks(),
+          ...dest.stream.getAudioTracks()
+        ];
+        mixedStream = new MediaStream(combinedTracks);
+      }
+
+      this.recordingStream = mixedStream;
+      this.recordedChunks = [];
+
+      // 5. Select supported mimeType
+      let mimeType = 'video/webm;codecs=vp9,opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm;codecs=vp8,opus';
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/webm';
+      }
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        mimeType = 'video/mp4';
+      }
+
+      this.mediaRecorder = new MediaRecorder(mixedStream, { mimeType });
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          this.recordedChunks.push(event.data);
+        }
+      };
+
+      this.mediaRecorder.onstop = () => {
+        const blob = new Blob(this.recordedChunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `meeting-recording-${this.roomCode()}-${Date.now()}.${mimeType.includes('mp4') ? 'mp4' : 'webm'}`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        // Stop all tracks to clear recording indicator
+        screenStream.getTracks().forEach(t => t.stop());
+        if (micStream) {
+          micStream.getTracks().forEach(t => t.stop());
+        }
+        audioContext.close();
+
+        this.isRecording.set(false);
+      };
+
+      // Handle when user stops sharing screen via browser UI
+      screenStream.getVideoTracks()[0].onended = () => {
+        if (this.isRecording()) {
+          this.stopRecording();
+        }
+      };
+
+      this.mediaRecorder.start(1000);
+      this.isRecording.set(true);
+
+    } catch (err) {
+      console.error('Failed to start recording:', err);
+      alert('Screen capture permission is required to record the meeting.');
+    }
+  }
+
+  private stopRecording(): void {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+    }
   }
 
   // --- Meeting End methods ---
