@@ -87,11 +87,11 @@
       <!-- Option B: Render Normal Participant Grid -->
       <div 
         *ngIf="!sharedScreenTrack()"
-        class="grid w-full h-full max-h-[70vh] gap-4 items-center justify-center transition-all duration-300"
+        class="grid w-full gap-6 transition-all duration-300 mx-auto"
         [ngClass]="{
-          'grid-cols-1 max-w-2xl': remoteParticipants().length === 0,
+          'grid-cols-1 max-w-3xl': remoteParticipants().length === 0,
           'grid-cols-1 md:grid-cols-2 max-w-5xl': remoteParticipants().length === 1,
-          'grid-cols-2 lg:grid-cols-3 max-w-6xl': remoteParticipants().length >= 2
+          'grid-cols-2 lg:grid-cols-3 max-w-7xl': remoteParticipants().length >= 2
         }"
       >
         <!-- Local User Tile -->
