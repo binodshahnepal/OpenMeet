@@ -62,7 +62,7 @@ public class MeetingsController : ControllerBase
             // Retrieve LiveKit settings
             var liveKitSection = _configuration.GetSection("LiveKit");
             var apiKey = liveKitSection["ApiKey"] ?? "devkey";
-            var apiSecret = liveKitSection["ApiSecret"] ?? "secretkey";
+            var apiSecret = liveKitSection["ApiSecret"] ?? "devsecretkey_openmeet_development_only_12345";
 
             var key = Encoding.UTF8.GetBytes(apiSecret);
             var tokenHandler = new JwtSecurityTokenHandler();
@@ -99,6 +99,7 @@ public class MeetingsController : ControllerBase
         }
         catch (Exception ex)
         {
+            Console.WriteLine($"[MeetingsController ERROR]: {ex}");
             return Unauthorized(new { error = "Failed to parse authentication token: " + ex.Message });
         }
     }
