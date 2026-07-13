@@ -222,8 +222,16 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
     const livekitUrl = 'ws://localhost:7880';
     await this.room.connect(livekitUrl, token);
 
-    // Publish local camera and mic streams
-    await this.room.localParticipant.enableCameraAndMicrophone();
+    // Publish local camera and mic streams (handled gracefully if devices are missing or permissions denied)
+    try {
+      await this.room.localParticipant.enableCameraAndMicrophone();
+      this.cameraActive.set(this.room.localParticipant.isCameraEnabled);
+      this.micActive.set(this.room.localParticipant.isMicrophoneEnabled);
+    } catch (mediaErr: any) {
+      console.warn('Could not publish local media streams (camera/mic missing or permission denied):', mediaErr);
+      this.cameraActive.set(false);
+      this.micActive.set(false);
+    }
 
     // Map local video feed to template preview element
     const localVideoTracks = Array.from(this.room.localParticipant.videoTrackPublications.values());
