@@ -1,192 +1,500 @@
-<div class="min-h-screen w-full bg-neutral-950 text-neutral-100 flex flex-col relative overflow-hidden">
+<div class="min-h-screen w-full bg-neutral-950 text-neutral-100 flex flex-row relative overflow-hidden font-sans">
   
-  <!-- 1. TOP INFORMATION HEADER -->
-  <header class="w-full px-6 py-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between absolute top-0 left-0 z-20">
-    <div class="flex items-center gap-3">
-      <div class="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs font-semibold text-emerald-400 flex items-center gap-2">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-        <span>LIVE CONFERENCE</span>
+  <!-- A. MAIN VIDEO WORKSPACE AREA -->
+  <div class="flex-1 flex flex-col relative min-h-screen overflow-hidden">
+    
+    <!-- 1. TOP INFORMATION HEADER -->
+    <header class="w-full px-6 py-4 bg-gradient-to-b from-black/80 to-transparent flex items-center justify-between absolute top-0 left-0 z-20">
+      <div class="flex items-center gap-3">
+        <div class="px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-xs font-semibold text-emerald-400 flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+          <span>LIVE CONFERENCE</span>
+        </div>
+        <div class="text-sm text-neutral-400 flex items-center gap-2">
+          Room Code: <span class="text-white font-mono font-semibold">{{ roomCode() }}</span>
+          <button 
+            (click)="copyMeetingLink()" 
+            class="ml-1 p-1 hover:bg-white/10 rounded text-neutral-400 hover:text-white transition-all active:scale-[0.9] cursor-pointer"
+            [title]="copied() ? 'Copied Link!' : 'Copy Meeting Link'"
+          >
+            <!-- Copy Clipboard Icon -->
+            <svg *ngIf="!copied()" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+            </svg>
+            <!-- Checkmark Icon -->
+            <svg *ngIf="copied()" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+          </button>
+        </div>
       </div>
-      <div class="text-sm text-neutral-400 flex items-center gap-2">
-        Room Code: <span class="text-white font-mono font-semibold">{{ roomCode() }}</span>
-        <button 
-          (click)="copyMeetingLink()" 
-          class="ml-1 p-1 hover:bg-white/10 rounded text-neutral-400 hover:text-white transition-all active:scale-[0.9] cursor-pointer"
-          [title]="copied() ? 'Copied Link!' : 'Copy Meeting Link'"
+
+      <!-- Active Count Badge -->
+      <div class="px-3.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-neutral-300 flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
+        </svg>
+        <span>{{ remoteParticipants().length + 1 }} Active</span>
+      </div>
+    </header>
+
+    <!-- 2. MAIN CONTENT AREA (GRID OR SCREEN SHARE VIEW) -->
+    <main class="flex-1 flex flex-col items-center justify-center p-6 pt-24 pb-28 relative z-10 w-full">
+      
+      <!-- Option A: Render Screen Share Layout (If Active) -->
+      <div *ngIf="sharedScreenTrack()" class="w-full h-full flex flex-col gap-4 max-h-[75vh]">
+        <!-- Active shared screen view -->
+        <div class="flex-1 bg-neutral-900 border border-white/5 rounded-3xl overflow-hidden shadow-2xl relative flex items-center justify-center">
+          <video 
+            #screenVideo 
+            autoplay 
+            playsinline 
+            [srcObject]="sharedScreenTrack()?.mediaStream"
+            class="w-full h-full object-contain bg-black rounded-3xl"
+          ></video>
+          <div class="absolute bottom-4 left-4 px-3 py-1.5 bg-black/80 backdrop-blur-md rounded-lg text-xs border border-white/10 text-white flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M3 5a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2h-2.22l.111.444A1 1 0 0112 19H8a1 1 0 01-.89-.556l.11-.444H5a2 2 0 01-2-2V5zm2 0h10v8H5V5z" clip-rule="evenodd" />
+            </svg>
+            <span>Screen shared by: <strong>{{ screenShareOwner() }}</strong></span>
+          </div>
+        </div>
+
+        <!-- Strip of participants below screen share -->
+        <div class="h-28 flex gap-4 overflow-x-auto py-2 justify-center">
+          <!-- Local User strip tile -->
+          <div class="relative w-40 aspect-video bg-neutral-900 border border-white/5 rounded-xl flex items-center justify-center flex-shrink-0">
+            <video #localVideoRef autoplay playsinline muted [class.hidden]="!cameraActive()" class="w-full h-full object-cover rounded-xl"></video>
+            <div *ngIf="!cameraActive()" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-neutral-400">
+              {{ userName().substring(0, 2).toUpperCase() }}
+            </div>
+            <div class="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 rounded text-[10px] text-white">You</div>
+          </div>
+          <!-- Remote Users strip tiles -->
+          <div 
+            *ngFor="let p of remoteParticipants()" 
+            class="relative w-40 aspect-video bg-neutral-900 border border-white/5 rounded-xl flex items-center justify-center flex-shrink-0"
+          >
+            <video [id]="'video_strip_' + p.identity" autoplay playsinline [class.hidden]="!p.cameraActive" class="w-full h-full object-cover rounded-xl"></video>
+            <div *ngIf="!p.cameraActive" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-xs font-bold text-neutral-400">
+              {{ p.name.substring(0, 2).toUpperCase() }}
+            </div>
+            <div class="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 rounded text-[10px] text-white truncate max-w-[80px]">{{ p.name }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Option B: Render Normal Participant Grid -->
+      <div 
+        *ngIf="!sharedScreenTrack()"
+        class="grid w-full h-full max-h-[70vh] gap-4 items-center justify-center transition-all duration-300"
+        [ngClass]="{
+          'grid-cols-1 max-w-2xl': remoteParticipants().length === 0,
+          'grid-cols-1 md:grid-cols-2 max-w-5xl': remoteParticipants().length === 1,
+          'grid-cols-2 lg:grid-cols-3 max-w-6xl': remoteParticipants().length >= 2
+        }"
+      >
+        <!-- Local User Tile -->
+        <div class="relative w-full aspect-video bg-neutral-900 border border-white/5 rounded-3xl overflow-hidden shadow-xl flex items-center justify-center">
+          <video
+            #localVideo
+            autoplay
+            playsinline
+            muted
+            [class.hidden]="!cameraActive() || errorMessage()"
+            class="w-full h-full object-cover rounded-3xl"
+          ></video>
+          <div *ngIf="!cameraActive() && !errorMessage()" class="flex flex-col items-center gap-4 animate-fade-in">
+            <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xl font-extrabold text-neutral-400 shadow-inner">
+              {{ userName().substring(0, 2).toUpperCase() }}
+            </div>
+            <span class="text-xs text-neutral-500 font-medium">Your camera is off</span>
+          </div>
+          <div class="absolute bottom-4 left-4 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
+            <span>You ({{ userName() }})</span>
+            <span class="w-1.5 h-1.5 rounded-full" [ngClass]="micActive() ? 'bg-emerald-500' : 'bg-red-500'"></span>
+          </div>
+        </div>
+
+        <!-- Remote Participants Tiles -->
+        <div 
+          *ngFor="let p of remoteParticipants()" 
+          class="relative w-full aspect-video bg-neutral-900 border border-white/5 rounded-3xl overflow-hidden shadow-xl flex items-center justify-center animate-fade-in"
         >
-          <!-- Copy Clipboard Icon -->
-          <svg *ngIf="!copied()" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+          <video
+            [id]="'video_' + p.identity"
+            autoplay
+            playsinline
+            [class.hidden]="!p.cameraActive"
+            class="w-full h-full object-cover rounded-3xl"
+          ></video>
+          <div *ngIf="!p.cameraActive" class="flex flex-col items-center gap-4 animate-fade-in">
+            <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xl font-extrabold text-neutral-400 shadow-inner">
+              {{ p.name.substring(0, 2).toUpperCase() }}
+            </div>
+            <span class="text-xs text-neutral-500 font-medium">{{ p.name }}'s camera is off</span>
+          </div>
+          <div class="absolute bottom-4 left-4 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
+            <span>{{ p.name }}</span>
+            <span class="w-1.5 h-1.5 rounded-full" [ngClass]="p.micActive ? 'bg-emerald-500' : 'bg-red-500'"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Error Alert Banner -->
+      <div *ngIf="errorMessage()" class="absolute inset-0 bg-neutral-950/90 flex flex-col items-center justify-center p-6 text-center z-30">
+        <div class="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center text-red-400 mb-4 animate-pulse">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
           </svg>
-          <!-- Checkmark Icon -->
-          <svg *ngIf="copied()" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+        </div>
+        <h3 class="text-lg font-bold text-white mb-2">WebRTC Session Failed</h3>
+        <p class="text-sm text-neutral-400 leading-relaxed mb-6 max-w-sm">{{ errorMessage() }}</p>
+        <button (click)="leaveRoom()" class="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-semibold rounded-xl transition-all duration-300">
+          Return to Dashboard
+        </button>
+      </div>
+
+      <!-- LiveKit Connection Overlay Spinner -->
+      <div *ngIf="isConnecting() && !errorMessage()" class="absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center gap-4 z-25">
+        <div class="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div>
+        <span class="text-sm text-neutral-400">{{ status() }}</span>
+      </div>
+
+      <!-- Emoji Reactions Overlay Container -->
+      <div class="absolute bottom-32 left-10 flex flex-col gap-2 pointer-events-none z-30">
+        <div 
+          *ngFor="let r of floatingReactions()" 
+          class="reaction-bubble flex items-center gap-2 bg-black/70 backdrop-blur-md px-3.5 py-1.5 rounded-full border border-white/10 text-sm font-medium animate-float-up"
+        >
+          <span>{{ r.reactionType }}</span>
+          <span class="text-neutral-400 text-xs">{{ r.senderName }}</span>
+        </div>
+      </div>
+    </main>
+
+    <!-- 3. FLOOR CONTROLS BAR -->
+    <footer class="w-full p-6 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center absolute bottom-0 left-0 z-20">
+      <div class="flex items-center gap-4 bg-white/5 backdrop-blur-lg border border-white/10 px-6 py-3 rounded-2xl shadow-xl">
+        
+        <!-- Toggle Mic -->
+        <button
+          (click)="toggleMic()"
+          [class.bg-red-500]="!micActive()"
+          [class.text-white]="!micActive()"
+          [class.bg-white/10]="micActive()"
+          [class.hover:bg-white/20]="micActive()"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="Toggle Microphone"
+        >
+          <svg *ngIf="micActive()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+          <svg *ngIf="!micActive()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+          </svg>
+        </button>
+
+        <!-- Toggle Camera -->
+        <button
+          (click)="toggleCamera()"
+          [class.bg-red-500]="!cameraActive()"
+          [class.text-white]="!cameraActive()"
+          [class.bg-white/10]="cameraActive()"
+          [class.hover:bg-white/20]="cameraActive()"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="Toggle Camera"
+        >
+          <svg *ngIf="cameraActive()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+          <svg *ngIf="!cameraActive()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+        </button>
+
+        <!-- Screen Share -->
+        <button
+          (click)="toggleScreenShare()"
+          [class.bg-emerald-600]="isScreenSharing()"
+          [class.bg-white/10]="!isScreenSharing()"
+          [class.hover:bg-white/20]="!isScreenSharing()"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="Share Screen"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+          </svg>
+        </button>
+
+        <!-- Separation Line -->
+        <div class="h-8 w-px bg-white/10"></div>
+
+        <!-- Participants toggle -->
+        <button
+          (click)="togglePanel('participants')"
+          [class.bg-purple-600]="activePanel() === 'participants'"
+          [class.bg-white/10]="activePanel() !== 'participants'"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="View Participants"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+
+        <!-- Chat toggle -->
+        <button
+          (click)="togglePanel('chat')"
+          [class.bg-purple-600]="activePanel() === 'chat'"
+          [class.bg-white/10]="activePanel() !== 'chat'"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer relative"
+          title="Open Chat"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+          </svg>
+        </button>
+
+        <!-- Whiteboard toggle -->
+        <button
+          (click)="togglePanel('whiteboard')"
+          [class.bg-purple-600]="activePanel() === 'whiteboard'"
+          [class.bg-white/10]="activePanel() !== 'whiteboard'"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="Interactive Whiteboard"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+          </svg>
+        </button>
+
+        <!-- Reactions Popover Trigger -->
+        <div class="relative group">
+          <button
+            class="w-12 h-12 bg-white/10 hover:bg-white/20 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+            title="Send Reaction"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
+          
+          <!-- Popover Reactions Menu (Shows on hover) -->
+          <div class="hidden group-hover:flex absolute bottom-full left-1/2 -translate-x-1/2 mb-2 bg-neutral-900 border border-white/10 p-2 rounded-xl gap-2 shadow-2xl z-40 animate-fade-in">
+            <button (click)="triggerReaction('👏')" class="hover:bg-white/10 p-1.5 rounded-lg text-lg active:scale-95 transition-transform cursor-pointer">👏</button>
+            <button (click)="triggerReaction('💖')" class="hover:bg-white/10 p-1.5 rounded-lg text-lg active:scale-95 transition-transform cursor-pointer">💖</button>
+            <button (click)="triggerReaction('👍')" class="hover:bg-white/10 p-1.5 rounded-lg text-lg active:scale-95 transition-transform cursor-pointer">👍</button>
+            <button (click)="triggerReaction('😂')" class="hover:bg-white/10 p-1.5 rounded-lg text-lg active:scale-95 transition-transform cursor-pointer">😂</button>
+            <button (click)="triggerReaction('🎉')" class="hover:bg-white/10 p-1.5 rounded-lg text-lg active:scale-95 transition-transform cursor-pointer">🎉</button>
+            <button (click)="triggerReaction('😮')" class="hover:bg-white/10 p-1.5 rounded-lg text-lg active:scale-95 transition-transform cursor-pointer">😮</button>
+          </div>
+        </div>
+
+        <!-- Separation Line -->
+        <div class="h-8 w-px bg-white/10"></div>
+
+        <!-- Hang Up Button -->
+        <button
+          (click)="leaveRoom()"
+          class="w-12 h-12 bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] cursor-pointer"
+          title="Leave Meeting"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 rotate-[135deg]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+          </svg>
+        </button>
+
+      </div>
+    </footer>
+  </div>
+
+  <!-- B. SIDEBAR PANELS DRAWER (Visible when activePanel() is not null) -->
+  <aside 
+    *ngIf="activePanel()" 
+    class="w-80 h-screen bg-neutral-900 border-l border-neutral-800 flex flex-col relative z-25 transition-all duration-300 animate-slide-in"
+  >
+    
+    <!-- 1. CHAT DRAWER PANEL -->
+    <div *ngIf="activePanel() === 'chat'" class="flex flex-col h-full w-full">
+      <div class="px-5 py-4 border-b border-neutral-800 flex items-center justify-between">
+        <h3 class="font-semibold text-white">Meeting Chat</h3>
+        <button (click)="activePanel.set(null)" class="text-neutral-400 hover:text-white cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
           </svg>
         </button>
       </div>
-    </div>
 
-    <!-- Active Count Badge -->
-    <div class="px-3.5 py-1 bg-white/5 border border-white/10 rounded-full text-xs text-neutral-300 flex items-center gap-2">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
-        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" />
-      </svg>
-      <span>{{ remoteParticipants().length + 1 }} Active</span>
-    </div>
-  </header>
-
-  <!-- 2. RESPONSIVE WEBRTC VIDEO GRID -->
-  <main class="flex-1 flex items-center justify-center p-6 pt-24 pb-28 relative z-10 w-full">
-    
-    <!-- Dynamic Participant CSS Grid -->
-    <div 
-      class="grid w-full h-full max-h-[70vh] gap-4 items-center justify-center transition-all duration-300"
-      [ngClass]="{
-        'grid-cols-1 max-w-2xl': remoteParticipants().length === 0,
-        'grid-cols-1 md:grid-cols-2 max-w-5xl': remoteParticipants().length === 1,
-        'grid-cols-2 lg:grid-cols-3 max-w-6xl': remoteParticipants().length >= 2
-      }"
-    >
-      
-      <!-- A. LOCAL USER CALL FEED SLOT -->
-      <div class="relative w-full aspect-video bg-neutral-900 border border-white/5 rounded-3xl overflow-hidden shadow-xl flex items-center justify-center">
-        <video
-          #localVideo
-          autoplay
-          playsinline
-          muted
-          [class.hidden]="!cameraActive() || errorMessage()"
-          class="w-full h-full object-cover rounded-3xl"
-        ></video>
-
-        <!-- Initials Placeholder -->
-        <div *ngIf="!cameraActive() && !errorMessage()" class="flex flex-col items-center gap-4 animate-fade-in">
-          <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xl font-extrabold text-neutral-400 shadow-inner">
-            {{ userName().substring(0, 2).toUpperCase() }}
+      <!-- Messages Thread -->
+      <div #chatScrollContainer class="flex-1 overflow-y-auto p-4 space-y-3">
+        <div *ngFor="let msg of chatMessages()" class="flex flex-col gap-1 max-w-[85%] animate-fade-in"
+             [ngClass]="msg.senderName === userName() ? 'ml-auto items-end' : ''">
+          <span class="text-[10px] text-neutral-400 font-medium">{{ msg.senderName }}</span>
+          <div class="px-3 py-2 rounded-xl text-sm"
+               [ngClass]="msg.senderName === userName() ? 'bg-purple-600 text-white rounded-br-none' : 'bg-neutral-800 text-neutral-200 rounded-bl-none'">
+            {{ msg.messageContent }}
           </div>
-          <span class="text-xs text-neutral-500 font-medium">Your camera is off</span>
+          <span class="text-[8px] text-neutral-500">{{ msg.timestamp | date:'shortTime' }}</span>
         </div>
-
-        <!-- Name Badge & Audio status overlays -->
-        <div class="absolute bottom-4 left-4 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
-          <span>You ({{ userName() }})</span>
-          <span class="w-1.5 h-1.5 rounded-full" [ngClass]="micActive() ? 'bg-emerald-500' : 'bg-red-500'"></span>
+        <div *ngIf="chatMessages().length === 0" class="h-full flex flex-col items-center justify-center text-center p-4">
+          <span class="text-sm text-neutral-500">No messages yet. Send a message to get started!</span>
         </div>
       </div>
 
-      <!-- B. REMOTE PARTICIPANTS CALL FEEDS SLOTS -->
-      <div 
-        *ngFor="let p of remoteParticipants()" 
-        class="relative w-full aspect-video bg-neutral-900 border border-white/5 rounded-3xl overflow-hidden shadow-xl flex items-center justify-center animate-fade-in"
-      >
-        <video
-          [id]="'video_' + p.identity"
-          autoplay
-          playsinline
-          [class.hidden]="!p.cameraActive"
-          class="w-full h-full object-cover rounded-3xl"
-        ></video>
+      <!-- Input Bar -->
+      <form (submit)="sendChat()" class="p-4 border-t border-neutral-800 flex gap-2">
+        <input 
+          type="text" 
+          name="chatMsg"
+          [(ngModel)]="chatInput" 
+          placeholder="Send message to everyone..." 
+          class="flex-1 px-3 py-2 bg-neutral-800 text-sm text-white rounded-lg border border-neutral-700 focus:outline-none focus:border-purple-500"
+          autocomplete="off"
+        />
+        <button type="submit" class="px-3 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-semibold text-xs transition-colors cursor-pointer">
+          Send
+        </button>
+      </form>
+    </div>
 
-        <!-- Initials Placeholder -->
-        <div *ngIf="!p.cameraActive" class="flex flex-col items-center gap-4 animate-fade-in">
-          <div class="w-20 h-20 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-2xl font-extrabold text-neutral-400 shadow-inner">
-            {{ p.name.substring(0, 2).toUpperCase() }}
+    <!-- 2. PARTICIPANTS DRAWER PANEL -->
+    <div *ngIf="activePanel() === 'participants'" class="flex flex-col h-full w-full">
+      <div class="px-5 py-4 border-b border-neutral-800 flex items-center justify-between">
+        <h3 class="font-semibold text-white">Participants</h3>
+        <button (click)="activePanel.set(null)" class="text-neutral-400 hover:text-white cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Participants list scroll -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        <!-- Local User Item -->
+        <div class="flex items-center justify-between bg-white/5 px-3 py-2 rounded-xl border border-white/5">
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/30 flex items-center justify-center text-xs font-bold text-purple-400">
+              {{ userName().substring(0, 2).toUpperCase() }}
+            </div>
+            <div class="flex flex-col">
+              <span class="text-sm font-semibold text-white">{{ userName() }}</span>
+              <span class="text-[10px] text-neutral-400">Host (You)</span>
+            </div>
           </div>
-          <span class="text-xs text-neutral-500 font-medium">{{ p.name }}'s camera is off</span>
+          <div class="flex items-center gap-2 text-neutral-400">
+            <!-- Mic status -->
+            <span [class.text-emerald-400]="micActive()" [class.text-red-500]="!micActive()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </span>
+            <!-- Camera status -->
+            <span [class.text-emerald-400]="cameraActive()" [class.text-red-500]="!cameraActive()">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </span>
+          </div>
         </div>
 
-        <!-- Name Badge & Audio status overlays -->
-        <div class="absolute bottom-4 left-4 px-3 py-1 bg-black/60 backdrop-blur-md rounded-lg text-xs text-white border border-white/5 flex items-center gap-2">
-          <span>{{ p.name }}</span>
-          <span class="w-1.5 h-1.5 rounded-full" [ngClass]="p.micActive ? 'bg-emerald-500' : 'bg-red-500'"></span>
+        <!-- Remote Participants list -->
+        <div 
+          *ngFor="let p of remoteParticipants()" 
+          class="flex items-center justify-between bg-neutral-800/40 px-3 py-2 rounded-xl border border-neutral-700/30"
+        >
+          <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-full bg-neutral-700 flex items-center justify-center text-xs font-bold text-neutral-300">
+              {{ p.name.substring(0, 2).toUpperCase() }}
+            </div>
+            <span class="text-sm font-medium text-neutral-200">{{ p.name }}</span>
+          </div>
+          <div class="flex items-center gap-2 text-neutral-400">
+            <!-- Mic status -->
+            <span [class.text-emerald-400]="p.micActive" [class.text-red-500]="!p.micActive">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+              </svg>
+            </span>
+            <!-- Camera status -->
+            <span [class.text-emerald-400]="p.cameraActive" [class.text-red-500]="!p.cameraActive">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+              </svg>
+            </span>
+          </div>
         </div>
       </div>
-
     </div>
 
-    <!-- Error Alert Banner -->
-    <div *ngIf="errorMessage()" class="absolute inset-0 bg-neutral-950/90 flex flex-col items-center justify-center p-6 text-center z-30">
-      <div class="w-16 h-16 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center text-red-400 mb-4 animate-pulse">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
+    <!-- 3. WHITEBOARD DRAWER PANEL -->
+    <div *ngIf="activePanel() === 'whiteboard'" class="flex flex-col h-full w-full">
+      <div class="px-5 py-4 border-b border-neutral-800 flex items-center justify-between bg-neutral-900 z-10">
+        <h3 class="font-semibold text-white">Whiteboard</h3>
+        <button (click)="activePanel.set(null)" class="text-neutral-400 hover:text-white cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
       </div>
-      <h3 class="text-lg font-bold text-white mb-2">WebRTC Session Failed</h3>
-      <p class="text-sm text-neutral-400 leading-relaxed mb-6 max-w-sm">{{ errorMessage() }}</p>
-      <button 
-        (click)="leaveRoom()" 
-        class="px-5 py-2.5 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-semibold rounded-xl transition-all duration-300"
-      >
-        Return to Dashboard
-      </button>
+
+      <!-- Toolbar tools settings -->
+      <div class="px-4 py-2 bg-neutral-950 border-b border-neutral-800 flex items-center justify-between gap-2 z-10 flex-wrap">
+        <!-- Tools selector -->
+        <div class="flex items-center gap-1.5">
+          <button 
+            (click)="selectDrawingTool(false)"
+            [class.bg-purple-600]="!isEraser"
+            [class.bg-neutral-800]="isEraser"
+            class="p-2 rounded-lg text-white transition-colors cursor-pointer"
+            title="Pen"
+          >
+            <!-- Pen Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+            </svg>
+          </button>
+          <button 
+            (click)="selectDrawingTool(true)"
+            [class.bg-purple-600]="isEraser"
+            [class.bg-neutral-800]="!isEraser"
+            class="p-2 rounded-lg text-white transition-colors cursor-pointer"
+            title="Eraser"
+          >
+            <!-- Eraser Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867-.867A2 2 0 0016.717 5.5H8.283a2 2 0 00-1.417.586L6 7m13 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7m14 0H5" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Color list picker -->
+        <div class="flex gap-1">
+          <button (click)="selectDrawingColor('#a855f7')" [class.ring-2]="selectedColor === '#a855f7'" class="w-5 h-5 rounded-full bg-purple-500 ring-white cursor-pointer"></button>
+          <button (click)="selectDrawingColor('#3b82f6')" [class.ring-2]="selectedColor === '#3b82f6'" class="w-5 h-5 rounded-full bg-blue-500 ring-white cursor-pointer"></button>
+          <button (click)="selectDrawingColor('#10b981')" [class.ring-2]="selectedColor === '#10b981'" class="w-5 h-5 rounded-full bg-emerald-500 ring-white cursor-pointer"></button>
+          <button (click)="selectDrawingColor('#ef4444')" [class.ring-2]="selectedColor === '#ef4444'" class="w-5 h-5 rounded-full bg-red-500 ring-white cursor-pointer"></button>
+          <button (click)="selectDrawingColor('#ffffff')" [class.ring-2]="selectedColor === '#ffffff'" class="w-5 h-5 rounded-full bg-white ring-black cursor-pointer"></button>
+        </div>
+
+        <button (click)="clearLocalWhiteboard()" class="text-xs bg-red-950 text-red-400 hover:bg-red-900 border border-red-900/30 px-2 py-1 rounded cursor-pointer">
+          Clear
+        </button>
+      </div>
+
+      <!-- Canvas container -->
+      <div class="flex-1 bg-neutral-950 relative overflow-hidden flex items-center justify-center">
+        <canvas
+          #whiteboardCanvas
+          (mousedown)="onCanvasMouseDown($event)"
+          (mousemove)="onCanvasMouseMove($event)"
+          (mouseup)="onCanvasMouseUpOrLeave()"
+          (mouseleave)="onCanvasMouseUpOrLeave()"
+          class="w-full h-full cursor-crosshair"
+        ></canvas>
+      </div>
     </div>
 
-    <!-- LiveKit Connection Overlay Spinner -->
-    <div *ngIf="isConnecting() && !errorMessage()" class="absolute inset-0 bg-neutral-950 flex flex-col items-center justify-center gap-4 z-25">
-      <div class="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin"></div>
-      <span class="text-sm text-neutral-400">{{ status() }}</span>
-    </div>
-  </main>
-
-  <!-- 3. FLOOR FLOATING CONTROLS BAR -->
-  <footer class="w-full p-6 bg-gradient-to-t from-black/80 to-transparent flex items-center justify-center absolute bottom-0 left-0 z-20">
-    <div class="flex items-center gap-4 bg-white/5 backdrop-blur-lg border border-white/10 px-6 py-3.5 rounded-2xl shadow-xl">
-      
-      <!-- Microphone Toggle -->
-      <button
-        (click)="toggleMic()"
-        [class.bg-red-500]="!micActive()"
-        [class.text-white]="!micActive()"
-        [class.bg-white/10]="micActive()"
-        [class.hover:bg-white/20]="micActive()"
-        class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
-        title="Toggle Microphone"
-      >
-        <!-- Mic Icon (On) -->
-        <svg *ngIf="micActive()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-        </svg>
-        <!-- Mic Icon (Off) -->
-        <svg *ngIf="!micActive()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-        </svg>
-      </button>
-
-      <!-- Camera Toggle -->
-      <button
-        (click)="toggleCamera()"
-        [class.bg-red-500]="!cameraActive()"
-        [class.text-white]="!cameraActive()"
-        [class.bg-white/10]="cameraActive()"
-        [class.hover:bg-white/20]="cameraActive()"
-        class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
-        title="Toggle Camera"
-      >
-        <!-- Video Icon (On) -->
-        <svg *ngIf="cameraActive()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-        <!-- Video Icon (Off) -->
-        <svg *ngIf="!cameraActive()" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-        </svg>
-      </button>
-
-      <!-- Separation Line -->
-      <div class="h-8 w-px bg-white/10"></div>
-
-      <!-- Hang Up / Leave Room Button -->
-      <button
-        (click)="leaveRoom()"
-        class="w-12 h-12 bg-red-600 hover:bg-red-500 text-white rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] cursor-pointer"
-        title="Leave Meeting"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 rotate-[135deg]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-        </svg>
-      </button>
-
-    </div>
-  </footer>
+  </aside>
 
 </div>

@@ -17,6 +17,16 @@ public class MeetingHub : Hub
         await Clients.Group(meetingCode).SendAsync("ReceiveMessage", senderName, messageContent);
     }
 
+    public async Task SendDraw(string meetingCode, string drawData)
+    {
+        await Clients.OthersInGroup(meetingCode).SendAsync("ReceiveDraw", drawData);
+    }
+
+    public async Task SendReaction(string meetingCode, string senderName, string reactionType)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceiveReaction", senderName, reactionType);
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);

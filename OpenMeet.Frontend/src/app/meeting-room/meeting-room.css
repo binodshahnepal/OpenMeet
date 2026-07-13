@@ -25,3 +25,47 @@
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Slide in animation for side drawers */
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Floating emojis animation */
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  30% {
+    transform: translateY(-30px) scale(1) rotate(5deg);
+  }
+  60% {
+    transform: translateY(-90px) scale(1) rotate(-5deg);
+  }
+  85% {
+    opacity: 1;
+    transform: translateY(-150px) scale(0.9);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-180px) scale(0.7);
+  }
+}
+
+.animate-float-up {
+  animation: floatUp 3s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+}
