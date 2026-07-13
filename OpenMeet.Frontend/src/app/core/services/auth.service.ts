@@ -41,4 +41,16 @@ export class AuthService {
   verifyEmail(email: string, code: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/verify-email`, { email, code });
   }
+
+  getMeetingToken(roomName: string): Observable<{ token: string }> {
+    const token = localStorage.getItem('token');
+    const headers = {
+      Authorization: `Bearer ${token}`
+    };
+    const baseApi = this.apiUrl.replace('/auth', '');
+    return this.http.get<{ token: string }>(`${baseApi}/meetings/token`, {
+      params: { roomName },
+      headers
+    });
+  }
 }
