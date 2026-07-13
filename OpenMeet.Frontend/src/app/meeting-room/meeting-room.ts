@@ -38,6 +38,7 @@ export class MeetingRoomComponent implements OnInit, OnDestroy {
 
   // Remote participants list signal
   protected readonly remoteParticipants = signal<ParticipantState[]>([]);
+  protected readonly copied = signal(false);
 
   private room: Room | null = null;
   private audioElements: HTMLAudioElement[] = [];
@@ -231,6 +232,18 @@ export class MeetingRoomComponent implements OnInit, OnDestroy {
       await this.room.localParticipant.setMicrophoneEnabled(nextState);
       this.micActive.set(nextState);
     }
+  }
+
+  protected copyMeetingLink(): void {
+    const link = window.location.href;
+    navigator.clipboard.writeText(link).then(() => {
+      this.copied.set(true);
+      setTimeout(() => {
+        this.copied.set(false);
+      }, 2000);
+    }).catch(err => {
+      console.error('Failed to copy link: ', err);
+    });
   }
 
   protected leaveRoom(): void {

@@ -52,7 +52,10 @@
     <!-- Actions Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
       <!-- A. CREATE MEETING CARD -->
-      <div class="group bg-white/5 backdrop-blur-xl border border-white/10 hover:border-purple-500/40 rounded-3xl p-8 flex flex-col justify-between shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/5">
+      <div 
+        (click)="createRoom()"
+        class="group bg-white/5 backdrop-blur-xl border border-white/10 hover:border-purple-500/40 rounded-3xl p-8 flex flex-col justify-between shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/5 cursor-pointer"
+      >
         <div>
           <!-- Icon -->
           <div class="w-14 h-14 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-center mb-6 text-purple-400 group-hover:scale-110 transition-all duration-300">
