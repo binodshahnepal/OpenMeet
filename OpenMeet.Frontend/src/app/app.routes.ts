@@ -22,6 +22,10 @@ export const routes: Routes = [
     loadComponent: () => import('./meeting-room/meeting-room').then(m => m.MeetingRoomComponent)
   },
   {
+    path: 'profile',
+    loadComponent: () => import('./profile/profile').then(m => m.ProfileComponent)
+  },
+  {
     path: '',
     redirectTo: 'register',
     pathMatch: 'full'

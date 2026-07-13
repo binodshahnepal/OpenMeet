@@ -4,7 +4,9 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../core/services/auth.service';
 import { SignalRService, ChatMessage, ReactionEvent } from '../core/services/signalr.service';
-import { Room, RoomEvent, RemoteParticipant, Track, VideoTrack, LocalVideoTrack } from 'livekit-client';
+import { Subscription } from 'rxjs';
+import { Room, RoomEvent, RemoteParticipant, Track, VideoTrack } from 'livekit-client';
+import { environment } from '../../environments/environment';
 
 interface ParticipantState {
   identity: string;
@@ -69,7 +71,19 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
 
   // Reactions State
   protected readonly floatingReactions = signal<(ReactionEvent & { id: number })[]>([]);
+  protected readonly reactionOptions = [
+    { label: '\u{1F44F}', title: 'Clap' },
+    { label: '\u{1F496}', title: 'Love' },
+    { label: '\u{1F44D}', title: 'Thumbs up' },
+    { label: '\u{1F602}', title: 'Laugh' },
+    { label: '\u{1F389}', title: 'Celebrate' },
+    { label: '\u{1F62E}', title: 'Surprised' }
+  ];
   private reactionIdCounter = 0;
+
+  // Hand Raise State
+  protected readonly isHandRaised = signal(false);
+  protected readonly raisedHands = signal<Record<string, boolean>>({});
 
   // Whiteboard drawing state
   private canvasContext: CanvasRenderingContext2D | null = null;
@@ -82,6 +96,7 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
 
   private room: Room | null = null;
   private audioElements: HTMLAudioElement[] = [];
+  private readonly subscriptions = new Subscription();
 
   ngOnInit(): void {
     const storedUser = localStorage.getItem('user');
@@ -111,13 +126,15 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
     // 1. Establish SignalR Realtime connection
     this.signalRService.startConnection(this.roomCode(), this.userName());
     this.subscribeToSignalREvents();
+    this.loadChatHistory();
 
     // 2. Fetch LiveKit tokens and connect
     this.joinMeeting();
   }
 
   ngOnDestroy(): void {
-    this.leaveRoom();
+    this.cleanupMeetingResources();
+    this.subscriptions.unsubscribe();
   }
 
   ngAfterViewChecked(): void {
@@ -127,34 +144,45 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   private subscribeToSignalREvents(): void {
-    // Chat Message Event
-    this.signalRService.messageReceived$.subscribe((msg: ChatMessage) => {
-      this.chatMessages.update(prev => [...prev, msg]);
-    });
+    this.subscriptions.add(
+      this.signalRService.messageReceived$.subscribe((msg: ChatMessage) => {
+        this.chatMessages.update(prev => [...prev, msg]);
+      })
+    );
 
-    // Whiteboard Drawing Event
-    this.signalRService.drawReceived$.subscribe((data: string) => {
-      if (this.activePanel() === 'whiteboard') {
-        try {
-          const stroke: WhiteboardStroke = JSON.parse(data);
-          this.drawStrokeOnCanvas(stroke);
-        } catch (err) {
-          console.error('Error parsing drawing stroke:', err);
+    this.subscriptions.add(
+      this.signalRService.drawReceived$.subscribe((data: string) => {
+        if (this.activePanel() === 'whiteboard') {
+          try {
+            const stroke: WhiteboardStroke = JSON.parse(data);
+            this.drawStrokeOnCanvas(stroke);
+          } catch (err) {
+            console.error('Error parsing drawing stroke:', err);
+          }
         }
-      }
-    });
+      })
+    );
 
-    // Reaction Event
-    this.signalRService.reactionReceived$.subscribe((reaction: ReactionEvent) => {
-      const id = this.reactionIdCounter++;
-      const newReaction = { ...reaction, id };
-      this.floatingReactions.update(prev => [...prev, newReaction]);
+    this.subscriptions.add(
+      this.signalRService.reactionReceived$.subscribe((reaction: ReactionEvent) => {
+        if (reaction.reactionType === 'raise-hand') {
+          this.raisedHands.update(prev => ({ ...prev, [reaction.senderName]: true }));
+          return;
+        }
+        if (reaction.reactionType === 'lower-hand') {
+          this.raisedHands.update(prev => ({ ...prev, [reaction.senderName]: false }));
+          return;
+        }
 
-      // Float reaction animation lasts ~3 seconds, clean up after
-      setTimeout(() => {
-        this.floatingReactions.update(prev => prev.filter(r => r.id !== id));
-      }, 3000);
-    });
+        const id = this.reactionIdCounter++;
+        const newReaction = { ...reaction, id };
+        this.floatingReactions.update(prev => [...prev, newReaction]);
+
+        setTimeout(() => {
+          this.floatingReactions.update(prev => prev.filter(r => r.id !== id));
+        }, 3000);
+      })
+    );
   }
 
   private joinMeeting(): void {
@@ -230,8 +258,7 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
         this.updateParticipantsList();
       });
 
-    const livekitUrl = 'ws://localhost:7880';
-    await this.room.connect(livekitUrl, token);
+    await this.room.connect(environment.liveKitUrl, token);
 
     // Join meeting with camera and microphone turned OFF by default for privacy
     this.cameraActive.set(false);
@@ -367,8 +394,39 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
   // --- Chat Methods ---
   protected sendChat(): void {
     if (!this.chatInput.trim()) return;
-    this.signalRService.sendMessage(this.roomCode(), this.userName(), this.chatInput);
+    const storedUser = localStorage.getItem('user');
+    let email = '';
+    if (storedUser) {
+      try {
+        email = JSON.parse(storedUser).email || '';
+      } catch {}
+    }
+    this.signalRService.sendMessage(this.roomCode(), email, this.userName(), this.chatInput);
     this.chatInput = '';
+  }
+
+  private loadChatHistory(): void {
+    this.authService.getChatHistory(this.roomCode()).subscribe({
+      next: (messages) => {
+        const formatted = messages.map(m => ({
+          senderName: m.senderName,
+          messageContent: m.content,
+          timestamp: new Date(m.timestamp)
+        }));
+        this.chatMessages.set(formatted);
+        setTimeout(() => this.scrollToBottom(), 200);
+      },
+      error: (err) => console.warn('Could not load chat history:', err)
+    });
+  }
+
+  protected toggleHandRaise(): void {
+    const nextState = !this.isHandRaised();
+    this.isHandRaised.set(nextState);
+    const eventType = nextState ? 'raise-hand' : 'lower-hand';
+    
+    this.raisedHands.update(prev => ({ ...prev, [this.userName()]: nextState }));
+    this.signalRService.sendReaction(this.roomCode(), this.userName(), eventType);
   }
 
   private scrollToBottom(): void {
@@ -499,6 +557,11 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
   }
 
   protected leaveRoom(): void {
+    this.cleanupMeetingResources();
+    this.router.navigate(['/lobby']);
+  }
+
+  private cleanupMeetingResources(): void {
     if (this.room) {
       this.room.disconnect();
       this.room = null;
@@ -508,7 +571,5 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
 
     // Stop SignalR connection
     this.signalRService.stopConnection();
-
-    this.router.navigate(['/lobby']);
   }
 }

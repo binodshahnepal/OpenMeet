@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
 import * as signalR from '@microsoft/signalr';
 import { Subject } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 export interface ChatMessage {
   senderName: string;
@@ -28,7 +29,7 @@ export class SignalRService {
 
   public startConnection(meetingCode: string, displayName: string): void {
     this.hubConnection = new signalR.HubConnectionBuilder()
-      .withUrl('http://localhost:5148/hubs/meeting')
+      .withUrl(environment.signalRHubUrl)
       .withAutomaticReconnect()
       .build();
 
@@ -67,9 +68,9 @@ export class SignalRService {
     }
   }
 
-  public sendMessage(meetingCode: string, senderName: string, messageContent: string): void {
+  public sendMessage(meetingCode: string, senderEmail: string, senderName: string, messageContent: string): void {
     if (this.hubConnection && this.isConnected()) {
-      this.hubConnection.invoke('SendMessage', meetingCode, senderName, messageContent)
+      this.hubConnection.invoke('SendMessage', meetingCode, senderEmail, senderName, messageContent)
         .catch(err => console.error('Error invoking SendMessage:', err));
     }
   }

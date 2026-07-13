@@ -43,6 +43,9 @@ public class SmtpEmailService : IEmailService
 
             using var smtp = new SmtpClient();
             
+            // Avoid SSL certificate validation issues in local environments
+            smtp.ServerCertificateValidationCallback = (s, c, h, e) => true;
+            
             // Connect using STARTTLS security (best for port 587)
             await smtp.ConnectAsync(_settings.Host, _settings.Port, SecureSocketOptions.StartTls);
             

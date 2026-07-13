@@ -9,7 +9,7 @@ using OpenMeet.Application.Common.Security;
 
 namespace OpenMeet.Application.Auth.Commands;
 
-public record LoginResult(Guid Id, string FullName, string Email, string Token);
+public record LoginResult(Guid Id, string FullName, string Email, string? Token, bool RequiresMfa);
 
 public record LoginUserCommand(string Email, string Password) : IRequest<LoginResult>;
 
@@ -52,8 +52,13 @@ public class LoginUserCommandHandler : IRequestHandler<LoginUserCommand, LoginRe
             throw new InvalidOperationException("Please verify your email address before logging in.");
         }
 
+        if (user.IsMfaEnabled)
+        {
+            return new LoginResult(user.Id, user.FullName, user.Email, null, true);
+        }
+
         var token = _jwtTokenGenerator.GenerateToken(user);
 
-        return new LoginResult(user.Id, user.FullName, user.Email, token);
+        return new LoginResult(user.Id, user.FullName, user.Email, token, false);
     }
 }

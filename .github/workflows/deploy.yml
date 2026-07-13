@@ -1,0 +1,86 @@
+name: Deploy OpenMeet
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Setup and Build Backend
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish Backend
+        run: |
+          dotnet publish OpenMeet.Backend/src/OpenMeet.WebApi/OpenMeet.WebApi.csproj -c Release -f net10.0 -o ./backend-publish
+
+      # 2. Setup and Build Frontend
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Frontend
+        run: |
+          cd OpenMeet.Frontend
+          npm install
+          npm run build
+
+      # 3. Zip Build Artifacts
+      - name: Zip Artifacts
+        run: |
+          zip -r backend.zip ./backend-publish/*
+          cd OpenMeet.Frontend/dist/OpenMeet.Frontend
+          zip -r ../../../frontend.zip ./*
+
+      # 4. Copy Zip files to Azure Server via SFTP
+      - name: Copy files via SFTP
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          source: "backend.zip,frontend.zip"
+          target: "/home/tivrasoft/apps/OpenMeet/temp"
+
+      # 5. Extract and Deploy on Azure Server via SSH
+      - name: Deploy and Restart Services
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USERNAME }}
+          password: ${{ secrets.SSH_PASSWORD }}
+          script: |
+            # 1. Ensure target folders exist
+            sudo mkdir -p /home/tivrasoft/apps/OpenMeet/backend
+            sudo mkdir -p /home/tivrasoft/apps/OpenMeet/frontend
+            sudo chown -R tivrasoft:tivrasoft /home/tivrasoft/apps/OpenMeet
+
+            # 2. Extract backend (preserve existing openmeet.db database!)
+            if [ -f /home/tivrasoft/apps/OpenMeet/backend/openmeet.db ]; then
+              cp /home/tivrasoft/apps/OpenMeet/backend/openmeet.db /home/tivrasoft/apps/OpenMeet/openmeet.db.bak
+            fi
+            
+            unzip -o /home/tivrasoft/apps/OpenMeet/temp/backend.zip -d /home/tivrasoft/apps/OpenMeet/backend
+            
+            if [ -f /home/tivrasoft/apps/OpenMeet/openmeet.db.bak ]; then
+              mv /home/tivrasoft/apps/OpenMeet/openmeet.db.bak /home/tivrasoft/apps/OpenMeet/backend/openmeet.db
+            fi
+
+            # 3. Extract frontend
+            unzip -o /home/tivrasoft/apps/OpenMeet/temp/frontend.zip -d /home/tivrasoft/apps/OpenMeet/frontend
+
+            # 4. Clean up temp zip files
+            rm -rf /home/tivrasoft/apps/OpenMeet/temp
+
+            # 5. Restart backend systemd service
+            echo "${{ secrets.SSH_PASSWORD }}" | sudo -S systemctl restart openmeet-api.service

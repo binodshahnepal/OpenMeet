@@ -17,15 +17,21 @@
 
     <!-- Right Profile Info -->
     <div class="flex items-center gap-4">
-      <div class="hidden md:flex flex-col text-right">
-        <span class="text-sm font-semibold text-white">{{ fullName() }}</span>
-        <span class="text-xs text-neutral-400">{{ email() }}</span>
-      </div>
-      
-      <!-- User Initials Circle -->
-      <div class="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-sm font-bold text-neutral-300">
-        {{ fullName().substring(0, 2).toUpperCase() }}
-      </div>
+      <a routerLink="/profile" class="flex items-center gap-3 hover:opacity-85 transition-all">
+        <div class="hidden md:flex flex-col text-right">
+          <span class="text-sm font-semibold text-white">{{ fullName() }}</span>
+          <span class="text-xs text-neutral-400">View Profile</span>
+        </div>
+        
+        <!-- User Initials or Avatar -->
+        @if (profilePictureUrl()) {
+          <img [src]="profilePictureUrl()" class="w-9 h-9 rounded-full object-cover border border-white/20 shadow-md" alt="Avatar" />
+        } @else {
+          <div class="w-9 h-9 rounded-full bg-white/10 border border-white/20 flex items-center justify-center text-sm font-bold text-neutral-300">
+            {{ fullName().substring(0, 2).toUpperCase() }}
+          </div>
+        }
+      </a>
 
       <!-- Sign Out Button -->
       <button 
@@ -38,80 +44,290 @@
   </header>
 
   <!-- 2. MAIN LOBBY INTERFACE -->
-  <main class="flex-1 flex flex-col items-center justify-center px-4 py-12 max-w-4xl mx-auto w-full relative z-10">
+  <main class="flex-1 flex flex-col items-center justify-center px-4 py-8 max-w-4xl mx-auto w-full relative z-10">
     <!-- Hero / Welcome Info -->
-    <div class="text-center mb-12 max-w-lg">
-      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent mb-4 leading-tight">
+    <div class="text-center mb-8 max-w-lg">
+      <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent mb-3 leading-tight animate-fade-in">
         Lobby Dashboard
       </h1>
       <p class="text-neutral-400 text-sm md:text-base leading-relaxed">
-        Start a new meeting room instantly or join an active call with a code. Simple, clean, and zero lag.
+        Start an instant call, schedule a session, or view your meeting logs in one dashboard.
       </p>
     </div>
 
-    <!-- Actions Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
-      <!-- A. CREATE MEETING CARD -->
-      <div 
-        (click)="createRoom()"
-        class="group bg-white/5 backdrop-blur-xl border border-white/10 hover:border-purple-500/40 rounded-3xl p-8 flex flex-col justify-between shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/5 cursor-pointer"
+    <!-- Tab Selection -->
+    <div class="flex border-b border-white/10 w-full mb-8 justify-center gap-6">
+      <button 
+        (click)="activeTab.set('actions')"
+        class="py-3 px-4 text-sm font-semibold border-b-2 transition-all duration-300"
+        [class.border-purple-500]="activeTab() === 'actions'"
+        [class.text-white]="activeTab() === 'actions'"
+        [class.border-transparent]="activeTab() !== 'actions'"
+        [class.text-neutral-400]="activeTab() !== 'actions'"
       >
-        <div>
-          <!-- Icon -->
-          <div class="w-14 h-14 bg-purple-500/10 border border-purple-500/20 rounded-2xl flex items-center justify-center mb-6 text-purple-400 group-hover:scale-110 transition-all duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        Meeting Actions
+      </button>
+      <button 
+        (click)="activeTab.set('scheduled')"
+        class="py-3 px-4 text-sm font-semibold border-b-2 transition-all duration-300 relative"
+        [class.border-purple-500]="activeTab() === 'scheduled'"
+        [class.text-white]="activeTab() === 'scheduled'"
+        [class.border-transparent]="activeTab() !== 'scheduled'"
+        [class.text-neutral-400]="activeTab() !== 'scheduled'"
+      >
+        Scheduled Meetings
+        @if (scheduledMeetings().length > 0) {
+          <span class="ml-1.5 px-1.5 py-0.5 text-[10px] bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-full font-bold">
+            {{ scheduledMeetings().length }}
+          </span>
+        }
+      </button>
+      <button 
+        (click)="activeTab.set('past')"
+        class="py-3 px-4 text-sm font-semibold border-b-2 transition-all duration-300"
+        [class.border-purple-500]="activeTab() === 'past'"
+        [class.text-white]="activeTab() === 'past'"
+        [class.border-transparent]="activeTab() !== 'past'"
+        [class.text-neutral-400]="activeTab() !== 'past'"
+      >
+        Past Meetings History
+      </button>
+    </div>
+
+    <!-- TAB CONTENTS -->
+    
+    <!-- Tab A: ACTIONS -->
+    @if (activeTab() === 'actions') {
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 w-full animate-fade-in">
+        <!-- 1. CREATE/SCHEDULE CARD -->
+        <div class="bg-white/5 backdrop-blur-xl border border-white/10 hover:border-purple-500/40 rounded-3xl p-8 flex flex-col justify-between shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-purple-500/5">
+          <div>
+            <div 
+              (click)="createRoom()"
+              title="Instant Meeting"
+              class="w-14 h-14 bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/25 rounded-2xl flex items-center justify-center mb-6 text-purple-400 cursor-pointer transition-all duration-200 active:scale-[0.93]"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-2">Host a Meeting</h2>
+            <p class="text-neutral-400 text-sm leading-relaxed mb-8">
+              Start an instant room immediately, or schedule a session in advance to send calendar invites to your team.
+            </p>
           </div>
-          <h2 class="text-2xl font-bold text-white mb-2">Create a New Meeting</h2>
-          <p class="text-neutral-400 text-sm leading-relaxed mb-8">
-            Set up a fresh meeting room immediately. You will become the host and can share the generated code.
-          </p>
+
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button
+              (click)="createRoom()"
+              [disabled]="isLoading()"
+              class="flex-1 py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/20 active:scale-[0.98] disabled:opacity-50"
+            >
+              Instant Meeting
+            </button>
+            <button
+              (click)="openScheduleModal()"
+              class="flex-1 py-3 bg-white/5 hover:bg-white/10 border border-white/15 text-white font-semibold rounded-xl transition-all duration-300 active:scale-[0.98]"
+            >
+              Schedule Meeting
+            </button>
+          </div>
         </div>
 
-        <button
-          (click)="createRoom()"
-          class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/20 active:scale-[0.98]"
-        >
-          Instant Meeting
-        </button>
-      </div>
-
-      <!-- B. JOIN MEETING CARD -->
-      <div class="group bg-white/5 backdrop-blur-xl border border-white/10 hover:border-pink-500/40 rounded-3xl p-8 flex flex-col justify-between shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-pink-500/5">
-        <div>
-          <!-- Icon -->
-          <div class="w-14 h-14 bg-pink-500/10 border border-pink-500/20 rounded-2xl flex items-center justify-center mb-6 text-pink-400 group-hover:scale-110 transition-all duration-300">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
-            </svg>
+        <!-- 2. JOIN MEETING CARD -->
+        <div class="bg-white/5 backdrop-blur-xl border border-white/10 hover:border-pink-500/40 rounded-3xl p-8 flex flex-col justify-between shadow-xl transition-all duration-300 hover:shadow-2xl hover:shadow-pink-500/5">
+          <div>
+            <div class="w-14 h-14 bg-pink-500/10 border border-pink-500/20 rounded-2xl flex items-center justify-center mb-6 text-pink-400">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-white mb-2">Join with a Code</h2>
+            <p class="text-neutral-400 text-sm leading-relaxed mb-6">
+              Enter the room code or full meeting URL provided by the organizer to join the active video call.
+            </p>
           </div>
-          <h2 class="text-2xl font-bold text-white mb-2">Join with a Code</h2>
-          <p class="text-neutral-400 text-sm leading-relaxed mb-6">
-            Enter the room code or full meeting URL provided by the organizer to join the active video call.
-          </p>
+
+          <div class="space-y-4">
+            <input
+              type="text"
+              [value]="joinRoomCode()"
+              (input)="joinRoomCode.set($any($event.target).value)"
+              class="w-full px-4 py-3 bg-neutral-900/60 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-300 text-sm placeholder-neutral-600 text-white"
+              placeholder="e.g. abc-defg-hij"
+              (keyup.enter)="joinRoomCode().trim() && joinRoom()"
+            />
+
+            <button
+              (click)="joinRoom()"
+              [disabled]="!joinRoomCode().trim()"
+              class="w-full py-3 bg-white hover:bg-neutral-200 disabled:opacity-50 text-neutral-900 font-semibold rounded-xl transition-all duration-300 active:scale-[0.98]"
+            >
+              Join Room
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- Tab B: SCHEDULED MEETINGS -->
+    @if (activeTab() === 'scheduled') {
+      <div class="w-full animate-fade-in space-y-4">
+        @if (scheduledMeetings().length === 0) {
+          <div class="bg-white/5 border border-white/10 rounded-3xl p-12 text-center text-neutral-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <p class="font-semibold text-white mb-1">No upcoming scheduled meetings</p>
+            <p class="text-sm">Click "Host a Meeting" and schedule one now.</p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-1 gap-4 w-full">
+            @for (meeting of scheduledMeetings(); track meeting.id) {
+              <div class="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 hover:border-purple-500/30 transition-all duration-300">
+                <div class="space-y-1">
+                  <h3 class="font-bold text-lg text-white">{{ meeting.title }}</h3>
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400">
+                    <span class="flex items-center gap-1">
+                      <span class="inline-block w-2 h-2 rounded-full bg-purple-500"></span>
+                      Code: <code class="bg-neutral-800 text-purple-300 px-1.5 py-0.5 rounded font-mono">{{ meeting.meetingCode }}</code>
+                    </span>
+                    <span>Date: {{ meeting.scheduledStartTime | date:'medium' }}</span>
+                  </div>
+                </div>
+                <div class="flex gap-3 w-full md:w-auto">
+                  <a 
+                    [routerLink]="['/meeting', meeting.meetingCode]"
+                    class="flex-1 md:flex-none text-center px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-lg transition-all"
+                  >
+                    Start Call
+                  </a>
+                  <button 
+                    (click)="endOrCancelMeeting(meeting.meetingCode)"
+                    class="flex-1 md:flex-none px-4 py-2 border border-red-500/20 hover:bg-red-500/10 text-red-400 text-xs font-semibold rounded-lg transition-all"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
+    <!-- Tab C: PAST MEETINGS -->
+    @if (activeTab() === 'past') {
+      <div class="w-full animate-fade-in space-y-4">
+        @if (pastMeetings().length === 0) {
+          <div class="bg-white/5 border border-white/10 rounded-3xl p-12 text-center text-neutral-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 mx-auto mb-4 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="font-semibold text-white mb-1">No meeting history yet</p>
+            <p class="text-sm">Completed meetings will be logged here.</p>
+          </div>
+        } @else {
+          <div class="grid grid-cols-1 gap-4 w-full">
+            @for (meeting of pastMeetings(); track meeting.id) {
+              <div class="bg-white/5 border border-white/10 rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="space-y-1">
+                  <h3 class="font-bold text-base text-white">{{ meeting.title }}</h3>
+                  <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-neutral-400">
+                    <span>Code: <code class="bg-neutral-800 text-neutral-300 px-1 rounded font-mono">{{ meeting.meetingCode }}</code></span>
+                    <span>Started: {{ meeting.actualStartTime ? (meeting.actualStartTime | date:'short') : (meeting.scheduledStartTime | date:'short') }}</span>
+                    @if (meeting.actualEndTime) {
+                      <span>Ended: {{ meeting.actualEndTime | date:'shortTime' }}</span>
+                    }
+                  </div>
+                </div>
+                <span class="px-2.5 py-1 text-[11px] font-semibold bg-neutral-800 text-neutral-400 border border-white/5 rounded-full">
+                  Completed
+                </span>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+  </main>
+
+  <!-- 3. SCHEDULE MEETING MODAL -->
+  @if (showScheduleModal()) {
+    <div class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      <div class="bg-neutral-900 border border-white/10 rounded-3xl w-full max-w-md p-8 shadow-2xl animate-scale-in">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-white">Schedule a Meeting</h2>
+          <button 
+            (click)="showScheduleModal.set(false)"
+            class="text-neutral-400 hover:text-white"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         <div class="space-y-4">
-          <!-- Room Code Input -->
-          <input
-            type="text"
-            [value]="joinRoomCode()"
-            (input)="joinRoomCode.set($any($event.target).value)"
-            class="w-full px-4 py-3 bg-neutral-900/60 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:border-transparent transition-all duration-300 text-sm placeholder-neutral-600 text-white"
-            placeholder="e.g. abc-defg-hij"
-            (keyup.enter)="joinRoomCode().trim() && joinRoom()"
-          />
+          <!-- Title -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-neutral-400">Meeting Title</label>
+            <input 
+              type="text" 
+              [value]="newMeetingTitle()"
+              (input)="newMeetingTitle.set($any($event.target).value)"
+              class="w-full px-4 py-2.5 bg-neutral-950 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-white"
+              placeholder="e.g. Weekly Sync"
+            />
+          </div>
 
-          <button
-            (click)="joinRoom()"
-            [disabled]="!joinRoomCode().trim()"
-            class="w-full py-3 bg-white hover:bg-neutral-200 disabled:opacity-50 text-neutral-900 font-semibold rounded-xl transition-all duration-300 active:scale-[0.98]"
+          <!-- Date / Time -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-neutral-400">Scheduled Date & Time</label>
+            <input 
+              #dateInput
+              type="datetime-local" 
+              [value]="newMeetingDateTime()"
+              (input)="newMeetingDateTime.set($any($event.target).value)"
+              (click)="dateInput.showPicker()"
+              style="color-scheme: dark;"
+              class="w-full px-4 py-2.5 bg-neutral-950 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-white"
+            />
+          </div>
+
+          <!-- Meeting Code -->
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-neutral-400">Meeting Code (Generated)</label>
+            <input 
+              type="text" 
+              [value]="newMeetingCode()"
+              (input)="newMeetingCode.set($any($event.target).value)"
+              class="w-full px-4 py-2.5 bg-neutral-950 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-sm text-white font-mono"
+            />
+          </div>
+
+          <!-- Messages -->
+          @if (errorMessage()) {
+            <p class="text-xs text-red-400 bg-red-500/10 border border-red-500/20 p-2.5 rounded-lg">
+              {{ errorMessage() }}
+            </p>
+          }
+          @if (successMessage()) {
+            <p class="text-xs text-green-400 bg-green-500/10 border border-green-500/20 p-2.5 rounded-lg">
+              {{ successMessage() }}
+            </p>
+          }
+
+          <!-- Submit Button -->
+          <button 
+            (click)="scheduleMeeting()"
+            [disabled]="isLoading()"
+            class="w-full py-3 mt-4 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white font-semibold rounded-xl transition-all duration-300 active:scale-[0.98] disabled:opacity-50"
           >
-            Join Room
+            Create Schedule
           </button>
         </div>
       </div>
     </div>
-  </main>
+  }
 </div>

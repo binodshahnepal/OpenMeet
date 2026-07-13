@@ -22,15 +22,15 @@
         <div class="text-xs text-neutral-400 uppercase tracking-wider">Active Session Details</div>
         <div class="text-sm font-semibold text-white">Status: <span class="text-emerald-400">Authenticated (JWT)</span></div>
         <p class="text-xs text-neutral-400 leading-relaxed mt-2 border-t border-white/10 pt-2">
-          Real-time participant list state (SignalR) and WebRTC audio/video call integration (LiveKit SDK) are the next feature steps on our project roadmap!
+          Real-time participant list state (SignalR) and WebRTC audio/video call integration (LiveKit SDK) are now active in your dashboard!
         </p>
       </div>
       
       <a
-        routerLink="/register"
-        class="w-full py-3 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white font-semibold rounded-xl transition-all duration-300 active:scale-[0.98] text-center cursor-pointer"
+        routerLink="/lobby"
+        class="w-full py-3 bg-purple-600 hover:bg-purple-500 text-white font-semibold rounded-xl transition-all duration-300 active:scale-[0.98] text-center cursor-pointer"
       >
-        Sign Out / Back
+        Go to Lobby
       </a>
     </div>
 
@@ -43,8 +43,12 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent">Sign In</h1>
-        <p class="text-sm text-neutral-400 mt-2">Sign in to your OpenMeet account</p>
+        <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent">
+          {{ showMfaChallenge() ? 'Two-Factor Auth' : 'Sign In' }}
+        </h1>
+        <p class="text-sm text-neutral-400 mt-2">
+          {{ showMfaChallenge() ? 'Enter the 6-digit code from your app' : 'Sign in to your OpenMeet account' }}
+        </p>
       </div>
 
       <!-- Error Alert -->
@@ -55,37 +59,68 @@
         <span>{{ errorMessage() }}</span>
       </div>
 
-      <form (submit)="onSubmit(); $event.preventDefault();" class="w-full space-y-5">
+      <!-- MFA Challenge Form -->
+      <div *ngIf="showMfaChallenge()" class="w-full space-y-5">
+        <div class="space-y-2">
+          <label for="mfaCode" class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Verification Code</label>
+          <input
+            id="mfaCode"
+            type="text"
+            [value]="mfaCode()"
+            (input)="mfaCode.set($any($event.target).value)"
+            required
+            class="w-full px-4 py-3 bg-neutral-950 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-sm text-center font-mono tracking-widest text-white"
+            placeholder="123456"
+            maxlength="6"
+            (keyup.enter)="mfaCode().trim() && verifyMfaLogin()"
+          />
+        </div>
+
+        <button
+          (click)="verifyMfaLogin()"
+          [disabled]="isLoading()"
+          class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/20 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+        >
+          <span *ngIf="isLoading()" class="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+          <span>Verify & Login</span>
+        </button>
+
+        <button 
+          (click)="showMfaChallenge.set(false)"
+          class="w-full py-2 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-neutral-300 font-semibold rounded-xl transition-all"
+        >
+          Back to Login
+        </button>
+      </div>
+
+      <!-- Standard Email/Password Login Form -->
+      <form *ngIf="!showMfaChallenge()" (submit)="onSubmit(); $event.preventDefault();" class="w-full space-y-5">
         <!-- Email Input -->
         <div class="space-y-2">
           <label for="email" class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Email Address</label>
-          <div class="relative">
-            <input
-              id="email"
-              type="email"
-              [value]="email()"
-              (input)="email.set($any($event.target).value)"
-              required
-              class="w-full px-4 py-3 bg-neutral-900/60 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-sm placeholder-neutral-600 text-white"
-              placeholder="name@example.com"
-            />
-          </div>
+          <input
+            id="email"
+            type="email"
+            [value]="email()"
+            (input)="email.set($any($event.target).value)"
+            required
+            class="w-full px-4 py-3 bg-neutral-900/60 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-sm placeholder-neutral-600 text-white"
+            placeholder="name@example.com"
+          />
         </div>
 
         <!-- Password Input -->
         <div class="space-y-2">
           <label for="password" class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Password</label>
-          <div class="relative">
-            <input
-              id="password"
-              type="password"
-              [value]="password()"
-              (input)="password.set($any($event.target).value)"
-              required
-              class="w-full px-4 py-3 bg-neutral-900/60 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-sm placeholder-neutral-600 text-white"
-              placeholder="••••••••"
-            />
-          </div>
+          <input
+            id="password"
+            type="password"
+            [value]="password()"
+            (input)="password.set($any($event.target).value)"
+            required
+            class="w-full px-4 py-3 bg-neutral-900/60 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-sm placeholder-neutral-600 text-white"
+            placeholder="••••••••"
+          />
         </div>
 
         <!-- Submit Button -->
@@ -100,7 +135,7 @@
       </form>
 
       <!-- Footer Links -->
-      <div class="mt-6 text-center text-sm text-neutral-400">
+      <div *ngIf="!showMfaChallenge()" class="mt-6 text-center text-sm text-neutral-400">
         Don't have an account?
         <a routerLink="/register" class="text-purple-400 hover:text-purple-300 font-medium underline transition-all ml-1">Sign up</a>
       </div>

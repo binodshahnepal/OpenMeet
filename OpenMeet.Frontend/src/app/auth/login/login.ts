@@ -19,6 +19,11 @@ export class LoginComponent {
   protected readonly email = signal('');
   protected readonly password = signal('');
 
+  // MFA Challenge signals
+  protected readonly showMfaChallenge = signal(false);
+  protected readonly mfaUserId = signal<string | null>(null);
+  protected readonly mfaCode = signal('');
+
   // Status signals
   protected readonly isLoading = signal(false);
   protected readonly errorMessage = signal<string | null>(null);
@@ -42,6 +47,12 @@ export class LoginComponent {
       next: (response) => {
         this.isLoading.set(false);
         
+        if (response.requiresMfa) {
+          this.mfaUserId.set(response.id);
+          this.showMfaChallenge.set(true);
+          return;
+        }
+
         // Store JWT token and user info securely in LocalStorage
         localStorage.setItem('token', response.token);
         localStorage.setItem('user', JSON.stringify({
@@ -59,6 +70,43 @@ export class LoginComponent {
         this.isLoading.set(false);
         const serverError = err.error?.error || 'Authentication failed. Please check your credentials.';
         this.errorMessage.set(serverError);
+      }
+    });
+  }
+
+  protected verifyMfaLogin(): void {
+    this.errorMessage.set(null);
+    this.successMessage.set(null);
+
+    const code = this.mfaCode().trim();
+    const userId = this.mfaUserId();
+
+    if (!code || !userId) {
+      this.errorMessage.set('Verification code is required.');
+      return;
+    }
+
+    this.isLoading.set(true);
+
+    this.authService.verifyMfaLogin(userId, code).subscribe({
+      next: (response) => {
+        this.isLoading.set(false);
+        
+        localStorage.setItem('token', response.token);
+        localStorage.setItem('user', JSON.stringify({
+          id: response.id,
+          fullName: response.fullName,
+          email: response.email
+        }));
+
+        this.successMessage.set(`Welcome back, ${response.fullName}! Login successful.`);
+        setTimeout(() => {
+          this.router.navigate(['/lobby']);
+        }, 600);
+      },
+      error: (err) => {
+        this.isLoading.set(false);
+        this.errorMessage.set(err.error?.error || 'Invalid 2FA verification code. Please try again.');
       }
     });
   }
