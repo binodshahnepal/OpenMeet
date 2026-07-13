@@ -69,7 +69,7 @@ public class MeetingsController : ControllerBase
 
             var header = new JwtHeader(new SigningCredentials(
                 new SymmetricSecurityKey(key),
-                SecurityAlgorithms.HmacSha256Signature));
+                SecurityAlgorithms.HmacSha256));
 
             var payload = new JwtPayload(
                 issuer: apiKey,
