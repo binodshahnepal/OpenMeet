@@ -152,26 +152,8 @@
       </div>
       <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">Check Your Email</h1>
       <p class="text-neutral-300 text-sm mb-6 px-2 leading-relaxed">
-        We have simulated sending a verification email to <strong class="text-white">{{ email() }}</strong>.
+        We have sent a verification email to <strong class="text-white">{{ email() }}</strong>. Please check your inbox and click the verification link to activate your account.
       </p>
-
-      <!-- Developer mode box -->
-      <div class="mt-2 p-4 bg-purple-950/20 border border-purple-500/30 rounded-2xl w-full text-left">
-        <div class="flex items-center gap-2 text-purple-400 font-semibold mb-2 text-xs uppercase tracking-wider">
-          <span class="w-2 h-2 rounded-full bg-purple-500 animate-ping"></span>
-          Developer Helper (Local Test)
-        </div>
-        <p class="text-xs text-neutral-400 mb-3 leading-relaxed">
-          In production, a real email is sent. For local testing, click the button below to instantly simulate clicking the verification link:
-        </p>
-        <a
-          [routerLink]="['/verify-email']"
-          [queryParams]="{ token: verificationLink()?.split('token=')?.pop() }"
-          class="inline-block w-full py-2.5 bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold rounded-xl text-center transition-all duration-300 shadow-md shadow-purple-500/20 active:scale-[0.98] cursor-pointer"
-        >
-          Verify Email Instantly
-        </a>
-      </div>
 
       <div class="mt-6 text-center text-sm">
         <a routerLink="/register" class="text-neutral-400 hover:text-white transition-all underline">Back to Registration</a>
