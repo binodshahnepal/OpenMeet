@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenMeet.Application.Common.Interfaces;
 using OpenMeet.Infrastructure.Persistence;
+using OpenMeet.Infrastructure.Security;
 using OpenMeet.Infrastructure.Services;
 
 namespace OpenMeet.Infrastructure;
@@ -20,6 +21,18 @@ public static class DependencyInjection
 
         services.AddScoped<IApplicationDbContext>(provider => provider.GetRequiredService<ApplicationDbContext>());
         
+        // JWT configuration and DI registration
+        var jwtSection = configuration.GetSection("JwtSettings");
+        var jwtSettings = new JwtSettings
+        {
+            Secret = jwtSection["Secret"] ?? "",
+            Issuer = jwtSection["Issuer"] ?? "",
+            Audience = jwtSection["Audience"] ?? "",
+            ExpiryMinutes = int.TryParse(jwtSection["ExpiryMinutes"], out var exp) ? exp : 60
+        };
+        services.AddSingleton(Microsoft.Extensions.Options.Options.Create(jwtSettings));
+        services.AddTransient<IJwtTokenGenerator, JwtTokenGenerator>();
+
         var emailSection = configuration.GetSection("EmailSettings");
         var emailSettings = new EmailSettings
         {

@@ -31,6 +31,13 @@ export class AuthService {
     });
   }
 
+  login(credentials: { email: string; passwordHash: string }): Observable<any> {
+    return this.http.post(`${this.apiUrl}/login`, {
+      email: credentials.email,
+      password: credentials.passwordHash
+    });
+  }
+
   verifyEmail(email: string, code: string): Observable<any> {
     return this.http.post(`${this.apiUrl}/verify-email`, { email, code });
   }
