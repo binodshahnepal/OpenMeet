@@ -7,7 +7,7 @@ using OpenMeet.Application.Common.Interfaces;
 
 namespace OpenMeet.Application.Auth.Commands;
 
-public record VerifyEmailCommand(string Token) : IRequest<bool>;
+public record VerifyEmailCommand(string Email, string Code) : IRequest<bool>;
 
 public class VerifyEmailCommandHandler : IRequestHandler<VerifyEmailCommand, bool>
 {
@@ -20,27 +20,32 @@ public class VerifyEmailCommandHandler : IRequestHandler<VerifyEmailCommand, boo
 
     public async Task<bool> Handle(VerifyEmailCommand request, CancellationToken cancellationToken)
     {
-        if (string.IsNullOrWhiteSpace(request.Token))
+        if (string.IsNullOrWhiteSpace(request.Email))
         {
-            throw new ArgumentException("Verification token is required.");
+            throw new ArgumentException("Email is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Code))
+        {
+            throw new ArgumentException("Verification code is required.");
         }
 
         var user = await _context.Users
-            .FirstOrDefaultAsync(u => u.EmailVerificationToken == request.Token, cancellationToken);
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.Email.ToLower(), cancellationToken);
 
-        if (user == null)
+        if (user == null || user.EmailVerificationCode != request.Code)
         {
-            throw new InvalidOperationException("Invalid or expired verification token.");
+            throw new InvalidOperationException("Invalid email or verification code.");
         }
 
-        if (user.EmailVerificationTokenExpires < DateTime.UtcNow)
+        if (user.EmailVerificationCodeExpires < DateTime.UtcNow)
         {
-            throw new InvalidOperationException("Verification token has expired.");
+            throw new InvalidOperationException("Verification code has expired.");
         }
 
         user.IsEmailVerified = true;
-        user.EmailVerificationToken = null;
-        user.EmailVerificationTokenExpires = null;
+        user.EmailVerificationCode = null;
+        user.EmailVerificationCodeExpires = null;
 
         await _context.SaveChangesAsync(cancellationToken);
 

@@ -23,7 +23,7 @@ public class AuthController : ControllerBase
         try
         {
             var result = await _mediator.Send(command);
-            return Ok(new { id = result.Id, verificationToken = result.VerificationToken, message = "Registration successful" });
+            return Ok(new { id = result.Id, verificationCode = result.VerificationCode, message = "Registration successful" });
         }
         catch (InvalidOperationException ex)
         {

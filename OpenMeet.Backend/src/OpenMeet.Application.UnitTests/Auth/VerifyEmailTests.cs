@@ -29,7 +29,7 @@ public class VerifyEmailTests : IDisposable
     }
 
     [Fact]
-    public async Task Handle_GivenValidToken_ShouldVerifyEmailSuccessfully()
+    public async Task Handle_GivenValidCode_ShouldVerifyEmailSuccessfully()
     {
         // Arrange
         var user = new User
@@ -38,13 +38,13 @@ public class VerifyEmailTests : IDisposable
             FullName = "John Doe",
             PasswordHash = "hashed_pw",
             IsEmailVerified = false,
-            EmailVerificationToken = "VALID_TOKEN_123",
-            EmailVerificationTokenExpires = DateTime.UtcNow.AddHours(2)
+            EmailVerificationCode = "123456",
+            EmailVerificationCodeExpires = DateTime.UtcNow.AddMinutes(15)
         };
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var command = new VerifyEmailCommand("VALID_TOKEN_123");
+        var command = new VerifyEmailCommand("john@example.com", "123456");
         var handler = new VerifyEmailCommandHandler(_context);
 
         // Act
@@ -56,12 +56,12 @@ public class VerifyEmailTests : IDisposable
         var updatedUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
         Assert.NotNull(updatedUser);
         Assert.True(updatedUser.IsEmailVerified);
-        Assert.Null(updatedUser.EmailVerificationToken);
-        Assert.Null(updatedUser.EmailVerificationTokenExpires);
+        Assert.Null(updatedUser.EmailVerificationCode);
+        Assert.Null(updatedUser.EmailVerificationCodeExpires);
     }
 
     [Fact]
-    public async Task Handle_GivenInvalidToken_ShouldThrowInvalidOperationException()
+    public async Task Handle_GivenInvalidCode_ShouldThrowInvalidOperationException()
     {
         // Arrange
         var user = new User
@@ -70,24 +70,24 @@ public class VerifyEmailTests : IDisposable
             FullName = "John Doe",
             PasswordHash = "hashed_pw",
             IsEmailVerified = false,
-            EmailVerificationToken = "REAL_TOKEN_999",
-            EmailVerificationTokenExpires = DateTime.UtcNow.AddHours(2)
+            EmailVerificationCode = "123456",
+            EmailVerificationCodeExpires = DateTime.UtcNow.AddMinutes(15)
         };
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var command = new VerifyEmailCommand("WRONG_TOKEN");
+        var command = new VerifyEmailCommand("john@example.com", "999999");
         var handler = new VerifyEmailCommandHandler(_context);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Invalid or expired verification token.", exception.Message);
+        Assert.Equal("Invalid email or verification code.", exception.Message);
     }
 
     [Fact]
-    public async Task Handle_GivenExpiredToken_ShouldThrowInvalidOperationException()
+    public async Task Handle_GivenExpiredCode_ShouldThrowInvalidOperationException()
     {
         // Arrange
         var user = new User
@@ -96,36 +96,39 @@ public class VerifyEmailTests : IDisposable
             FullName = "John Doe",
             PasswordHash = "hashed_pw",
             IsEmailVerified = false,
-            EmailVerificationToken = "EXPIRED_TOKEN_777",
-            EmailVerificationTokenExpires = DateTime.UtcNow.AddMinutes(-5) // Expired 5 minutes ago
+            EmailVerificationCode = "123456",
+            EmailVerificationCodeExpires = DateTime.UtcNow.AddMinutes(-5) // Expired 5 minutes ago
         };
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
 
-        var command = new VerifyEmailCommand("EXPIRED_TOKEN_777");
+        var command = new VerifyEmailCommand("john@example.com", "123456");
         var handler = new VerifyEmailCommandHandler(_context);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
             handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Verification token has expired.", exception.Message);
+        Assert.Equal("Verification code has expired.", exception.Message);
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData(null)]
-    public async Task Handle_GivenEmptyOrNullToken_ShouldThrowArgumentException(string? token)
+    [InlineData("", "123456", "Email is required.")]
+    [InlineData("   ", "123456", "Email is required.")]
+    [InlineData(null, "123456", "Email is required.")]
+    [InlineData("john@example.com", "", "Verification code is required.")]
+    [InlineData("john@example.com", "   ", "Verification code is required.")]
+    [InlineData("john@example.com", null, "Verification code is required.")]
+    public async Task Handle_GivenEmptyOrNullParameters_ShouldThrowArgumentException(string? email, string? code, string expectedMessage)
     {
         // Arrange
-        var command = new VerifyEmailCommand(token!);
+        var command = new VerifyEmailCommand(email!, code!);
         var handler = new VerifyEmailCommandHandler(_context);
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<ArgumentException>(() =>
             handler.Handle(command, CancellationToken.None));
 
-        Assert.Equal("Verification token is required.", exception.Message);
+        Assert.Equal(expectedMessage, exception.Message);
     }
 }

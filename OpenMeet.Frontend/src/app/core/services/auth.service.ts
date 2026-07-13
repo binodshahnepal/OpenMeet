@@ -31,7 +31,7 @@ export class AuthService {
     });
   }
 
-  verifyEmail(token: string): Observable<any> {
-    return this.http.post(`${this.apiUrl}/verify-email`, { token });
+  verifyEmail(email: string, code: string): Observable<any> {
+    return this.http.post(`${this.apiUrl}/verify-email`, { email, code });
   }
 }

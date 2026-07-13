@@ -9,8 +9,8 @@
     <!-- 1. LOADING STATE -->
     <div *ngIf="isLoading()" class="flex flex-col items-center py-6 text-center animate-fade-in">
       <div class="w-16 h-16 border-4 border-purple-500/30 border-t-purple-500 rounded-full animate-spin mb-6"></div>
-      <h1 class="text-2xl font-bold mb-2">Verifying Identity</h1>
-      <p class="text-neutral-400 text-sm">Please wait while we confirm your email authenticity...</p>
+      <h1 class="text-2xl font-bold mb-2">Verifying Code</h1>
+      <p class="text-neutral-400 text-sm">Please wait while we confirm your activation code...</p>
     </div>
 
     <!-- 2. SUCCESS STATE -->
@@ -26,29 +26,82 @@
       
       <a
         routerLink="/login"
-        class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/20 active:scale-[0.98] text-center cursor-pointer"
+        class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/20 active:scale-[0.98] text-center cursor-pointer font-bold"
       >
         Go to Login
       </a>
     </div>
 
-    <!-- 3. ERROR STATE -->
-    <div *ngIf="!isLoading() && errorMessage()" class="flex flex-col items-center text-center animate-fade-in w-full">
-      <!-- Error Cross Circle -->
-      <div class="w-20 h-20 bg-red-500/10 border border-red-500/30 rounded-full flex items-center justify-center mb-6 text-red-400 shadow-lg shadow-red-500/10">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <!-- 3. INPUT CODE STATE -->
+    <div *ngIf="!isLoading() && !isVerified()" class="w-full flex flex-col items-center animate-fade-in">
+      
+      <!-- Key Icon -->
+      <div class="w-16 h-16 bg-purple-500/10 border border-purple-500/30 rounded-2xl flex items-center justify-center mb-6 text-purple-400 shadow-lg shadow-purple-500/10">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 7a2 2 0 012 2m0 0a2 2 0 01-2 2m2-2h3.01M12 11h.01M10 20H4v-4h4v-2h2v-2h2v-2h2V8a4 4 0 00-8 0v12z" />
         </svg>
       </div>
-      <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-red-400 to-rose-400 bg-clip-text text-transparent mb-2">Verification Failed</h1>
-      <p class="text-neutral-400 text-sm mb-8 px-4 leading-relaxed">{{ errorMessage() }}</p>
-      
-      <a
-        routerLink="/register"
-        class="w-full py-3 bg-neutral-900 border border-neutral-800 hover:bg-neutral-800 text-white font-semibold rounded-xl transition-all duration-300 active:scale-[0.98] text-center cursor-pointer"
-      >
-        Back to Registration
-      </a>
+
+      <h1 class="text-3xl font-extrabold tracking-tight bg-gradient-to-r from-white via-neutral-200 to-neutral-400 bg-clip-text text-transparent mb-2">Verify Email</h1>
+      <p class="text-neutral-400 text-sm text-center mb-6 leading-relaxed">
+        Please check your inbox. We sent a 6-digit activation code to your email.
+      </p>
+
+      <!-- Error Alert inside Form -->
+      <div *ngIf="errorMessage()" class="w-full mb-5 p-4 bg-red-950/40 border border-red-500/30 text-red-300 rounded-xl text-sm flex items-center gap-3 animate-fade-in">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+          <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+        </svg>
+        <span>{{ errorMessage() }}</span>
+      </div>
+
+      <form (submit)="verify(); $event.preventDefault();" class="w-full space-y-5">
+        <!-- Email Input -->
+        <div class="space-y-2">
+          <label for="email" class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Email Address</label>
+          <div class="relative">
+            <input
+              id="email"
+              type="email"
+              [value]="email()"
+              (input)="email.set($any($event.target).value)"
+              required
+              class="w-full px-4 py-3 bg-neutral-900/60 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-sm placeholder-neutral-600 text-white"
+              placeholder="name@example.com"
+            />
+          </div>
+        </div>
+
+        <!-- Verification Code Input -->
+        <div class="space-y-2">
+          <label for="code" class="text-xs font-semibold text-neutral-400 uppercase tracking-wider">Verification Code</label>
+          <div class="relative">
+            <input
+              id="code"
+              type="text"
+              [value]="code()"
+              (input)="code.set($any($event.target).value)"
+              required
+              maxlength="6"
+              class="w-full px-4 py-3 bg-neutral-900/60 border border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-300 text-center text-xl font-mono tracking-[0.4em] placeholder-neutral-600 text-white"
+              placeholder="000000"
+            />
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button
+          type="submit"
+          [disabled]="isLoading() || code().length < 6"
+          class="w-full py-3 bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-500 hover:to-pink-400 disabled:opacity-50 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-purple-500/20 active:scale-[0.98] cursor-pointer flex items-center justify-center gap-2"
+        >
+          <span>Verify Code</span>
+        </button>
+      </form>
+
+      <div class="mt-6 text-center text-sm">
+        <a routerLink="/register" class="text-neutral-400 hover:text-white transition-all underline">Back to Registration</a>
+      </div>
     </div>
 
   </div>

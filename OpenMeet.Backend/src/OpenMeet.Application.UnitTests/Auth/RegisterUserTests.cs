@@ -44,7 +44,7 @@ public class RegisterUserTests : IDisposable
 
         // Assert
         Assert.NotEqual(Guid.Empty, result.Id);
-        Assert.NotNull(result.VerificationToken);
+        Assert.NotNull(result.VerificationCode);
         
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == result.Id);
         Assert.NotNull(user);
@@ -52,7 +52,7 @@ public class RegisterUserTests : IDisposable
         Assert.Equal("John Doe", user.FullName);
         Assert.Equal("User", user.Role);
         Assert.False(user.IsEmailVerified);
-        Assert.NotNull(user.EmailVerificationToken);
+        Assert.NotNull(user.EmailVerificationCode);
         Assert.True(PasswordHasher.VerifyPassword("Password123", user.PasswordHash));
 
         // Verify email service was called once

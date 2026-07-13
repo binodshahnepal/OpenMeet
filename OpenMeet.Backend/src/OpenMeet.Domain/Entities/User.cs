@@ -12,6 +12,6 @@ public class User : Entity
     public bool IsMfaEnabled { get; set; }
     public string? MfaSecret { get; set; }
     public bool IsEmailVerified { get; set; }
-    public string? EmailVerificationToken { get; set; }
-    public DateTime? EmailVerificationTokenExpires { get; set; }
+    public string? EmailVerificationCode { get; set; }
+    public DateTime? EmailVerificationCodeExpires { get; set; }
 }
