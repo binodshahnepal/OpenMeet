@@ -314,16 +314,26 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
   protected async toggleCamera(): Promise<void> {
     if (this.room?.localParticipant) {
       const nextState = !this.room.localParticipant.isCameraEnabled;
-      await this.room.localParticipant.setCameraEnabled(nextState);
-      this.cameraActive.set(nextState);
+      try {
+        await this.room.localParticipant.setCameraEnabled(nextState);
+        this.cameraActive.set(nextState);
+      } catch (err: any) {
+        console.error('Failed to toggle camera:', err);
+        alert('Camera access failed or permission was denied. Please verify camera permissions in your browser address bar.');
+      }
     }
   }
 
   protected async toggleMic(): Promise<void> {
     if (this.room?.localParticipant) {
       const nextState = !this.room.localParticipant.isMicrophoneEnabled;
-      await this.room.localParticipant.setMicrophoneEnabled(nextState);
-      this.micActive.set(nextState);
+      try {
+        await this.room.localParticipant.setMicrophoneEnabled(nextState);
+        this.micActive.set(nextState);
+      } catch (err: any) {
+        console.error('Failed to toggle microphone:', err);
+        alert('Microphone access failed or permission was denied. Please verify microphone permissions in your browser address bar.');
+      }
     }
   }
 
