@@ -85,6 +85,46 @@ public class MeetingHub : Hub
         await Clients.Group(meetingCode).SendAsync("ReceiveReaction", senderName, reactionType);
     }
 
+    public async Task SendSubtitle(string meetingCode, string senderName, string text)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceiveSubtitle", senderName, text);
+    }
+
+    public async Task CreatePoll(string meetingCode, string question, string optionsJson)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceivePollCreated", question, optionsJson);
+    }
+
+    public async Task CastVote(string meetingCode, int optionIndex)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceiveVoteCast", optionIndex);
+    }
+
+    public async Task SubmitQuestion(string meetingCode, string senderName, string text)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceiveQuestionSubmitted", Guid.NewGuid().ToString(), senderName, text);
+    }
+
+    public async Task UpvoteQuestion(string meetingCode, string questionId)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceiveQuestionUpvoted", questionId);
+    }
+
+    public async Task RequestMediaMute(string meetingCode, string targetIdentity, string mediaType)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceiveMediaMuteRequest", targetIdentity, mediaType);
+    }
+
+    public async Task RequestKick(string meetingCode, string targetIdentity)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceiveKickRequest", targetIdentity);
+    }
+
+    public async Task TriggerBreakout(string meetingCode, string assignmentsJson)
+    {
+        await Clients.Group(meetingCode).SendAsync("ReceiveBreakoutTrigger", assignmentsJson);
+    }
+
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
         await base.OnDisconnectedAsync(exception);

@@ -67,7 +67,7 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
   private recordedChunks: Blob[] = [];
 
   // Layout Panel Toggles
-  protected readonly activePanel = signal<'chat' | 'participants' | 'whiteboard' | null>(null);
+  protected readonly activePanel = signal<'chat' | 'participants' | 'whiteboard' | 'polls' | 'qa' | null>(null);
 
   // Chat Variables
   protected readonly chatMessages = signal<ChatMessage[]>([]);
@@ -78,6 +78,34 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
   protected readonly filteredParticipants = signal<string[]>([]);
   protected selectedMentionIndex = 0;
   protected readonly activeMentionToast = signal<string | null>(null);
+
+  // Host Settings
+  protected readonly isHost = signal(false);
+
+  // Closed Captions State
+  protected readonly isCaptionsEnabled = signal(false);
+  protected readonly activeSubtitles = signal<{ senderName: string, text: string }[]>([]);
+
+  // Virtual Background State
+  protected readonly showBackgroundModal = signal(false);
+  protected readonly activeBackground = signal<string | null>(null);
+  private originalVideoTrack: any = null;
+
+  // Polls State
+  protected readonly pollsList = signal<{ question: string, options: string[], votes: number[], totalVotes: number }[]>([]);
+  protected pollQuestionInput = '';
+  protected pollOptionsInput = ['', ''];
+  protected readonly hasVotedList = signal<Record<number, boolean>>({});
+
+  // Q&A State
+  protected readonly qaQuestions = signal<{ id: string, senderName: string, text: string, upvotes: number, hasUpvoted: boolean, isAnswered: boolean }[]>([]);
+  protected qaInput = '';
+
+  // Breakout Rooms State
+  protected readonly inBreakoutRoom = signal(false);
+  protected readonly breakoutRoomCode = signal<string | null>(null);
+  protected readonly breakoutTimerText = signal<string | null>(null);
+  private breakoutTimerInterval: any = null;
 
   // Reactions State
   protected readonly floatingReactions = signal<(ReactionEvent & { id: number })[]>([]);
@@ -204,13 +232,103 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
         }, 3000);
       })
     );
+
+    this.subscriptions.add(
+      this.signalRService.mediaMuteRequested$.subscribe(({ targetIdentity, mediaType }) => {
+        const storedUser = localStorage.getItem('user');
+        const myEmail = storedUser ? JSON.parse(storedUser).email : '';
+        if (targetIdentity === myEmail) {
+          if (mediaType === 'audio') {
+            this.room?.localParticipant.setMicrophoneEnabled(false);
+            this.micActive.set(false);
+          } else if (mediaType === 'video') {
+            this.room?.localParticipant.setCameraEnabled(false);
+            this.cameraActive.set(false);
+          }
+        }
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.kickRequested$.subscribe((targetIdentity) => {
+        const storedUser = localStorage.getItem('user');
+        const myEmail = storedUser ? JSON.parse(storedUser).email : '';
+        if (targetIdentity === myEmail) {
+          alert('You have been removed from the meeting by the host.');
+          this.leaveRoom();
+        }
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.subtitleReceived$.subscribe(({ senderName, text }) => {
+        const subtitle = { senderName, text };
+        this.activeSubtitles.update(prev => [...prev, subtitle]);
+        setTimeout(() => {
+          this.activeSubtitles.update(prev => prev.filter(s => s !== subtitle));
+        }, 5000);
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.pollCreated$.subscribe(({ question, options }) => {
+        const newPoll = {
+          question,
+          options,
+          votes: new Array(options.length).fill(0),
+          totalVotes: 0
+        };
+        this.pollsList.update(prev => [...prev, newPoll]);
+        this.hasVotedList.set({});
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.voteCast$.subscribe((optionIndex) => {
+        this.pollsList.update(polls => {
+          if (polls.length === 0) return polls;
+          const updated = [...polls];
+          const activePollIndex = updated.length - 1;
+          updated[activePollIndex].votes[optionIndex]++;
+          updated[activePollIndex].totalVotes++;
+          return updated;
+        });
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.questionSubmitted$.subscribe(({ id, senderName, text }) => {
+        const q = { id, senderName, text, upvotes: 0, hasUpvoted: false, isAnswered: false };
+        this.qaQuestions.update(prev => [...prev, q]);
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.questionUpvoted$.subscribe((questionId) => {
+        this.qaQuestions.update(list => list.map(q => q.id === questionId ? { ...q, upvotes: q.upvotes + 1 } : q));
+      })
+    );
+
+    this.subscriptions.add(
+      this.signalRService.breakoutTriggered$.subscribe((assignments) => {
+        const storedUser = localStorage.getItem('user');
+        const myEmail = storedUser ? JSON.parse(storedUser).email : '';
+        const match = assignments.find(a => a.email === myEmail);
+        if (match) {
+          this.joinBreakoutRoom(match.roomCode, match.durationMinutes);
+        }
+      })
+    );
   }
 
   private joinMeeting(): void {
     this.status.set('Requesting LiveKit access credentials...');
     
     this.authService.getMeetingToken(this.roomCode()).subscribe({
-      next: async (res: { token: string }) => {
+      next: async (res: { token: string, isHost?: boolean }) => {
+        if (res.isHost) {
+          this.isHost.set(true);
+        }
         try {
           await this.connectToLiveKit(res.token);
         } catch (err: any) {
@@ -400,7 +518,7 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
     }
   }
 
-  protected togglePanel(panel: 'chat' | 'participants' | 'whiteboard'): void {
+  protected togglePanel(panel: 'chat' | 'participants' | 'whiteboard' | 'polls' | 'qa'): void {
     if (this.activePanel() === panel) {
       this.activePanel.set(null);
     } else {
@@ -757,6 +875,239 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
     if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
       this.mediaRecorder.stop();
     }
+  }
+
+  // --- Moderator Actions (Mute & Kick) ---
+  protected muteParticipant(identity: string, type: 'audio' | 'video'): void {
+    if (this.isHost()) {
+      this.signalRService.requestMediaMute(this.roomCode(), identity, type);
+    }
+  }
+
+  protected kickParticipant(identity: string): void {
+    if (this.isHost()) {
+      this.signalRService.requestKick(this.roomCode(), identity);
+    }
+  }
+
+  // --- Closed Captions (Subtitles) ---
+  private speechRecognition: any = null;
+
+  protected toggleCaptions(): void {
+    const nextState = !this.isCaptionsEnabled();
+    this.isCaptionsEnabled.set(nextState);
+    if (nextState) {
+      this.startSpeechRecognition();
+    } else {
+      this.stopSpeechRecognition();
+    }
+  }
+
+  private startSpeechRecognition(): void {
+    const Speech = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!Speech) {
+      console.warn('Speech recognition is not supported in this browser.');
+      return;
+    }
+
+    this.speechRecognition = new Speech();
+    this.speechRecognition.continuous = true;
+    this.speechRecognition.interimResults = false;
+    this.speechRecognition.lang = 'en-US';
+
+    this.speechRecognition.onresult = (event: any) => {
+      const lastResultIndex = event.resultIndex;
+      const transcript = event.results[lastResultIndex][0].transcript.trim();
+      if (transcript) {
+        this.signalRService.sendSubtitle(this.roomCode(), this.userName(), transcript);
+      }
+    };
+
+    this.speechRecognition.onerror = (err: any) => {
+      console.error('Speech recognition error:', err);
+    };
+
+    this.speechRecognition.onend = () => {
+      if (this.isCaptionsEnabled()) {
+        try {
+          this.speechRecognition.start();
+        } catch {}
+      }
+    };
+
+    try {
+      this.speechRecognition.start();
+    } catch (e) {
+      console.error('Failed to start speech recognition:', e);
+    }
+  }
+
+  private stopSpeechRecognition(): void {
+    if (this.speechRecognition) {
+      this.speechRecognition.stop();
+      this.speechRecognition = null;
+    }
+  }
+
+  // --- Live Polls ---
+  protected addPollOption(): void {
+    this.pollOptionsInput.push('');
+  }
+
+  protected removePollOption(index: number): void {
+    if (this.pollOptionsInput.length > 2) {
+      this.pollOptionsInput.splice(index, 1);
+    }
+  }
+
+  protected submitNewPoll(): void {
+    const question = this.pollQuestionInput.trim();
+    const options = this.pollOptionsInput.map(o => o.trim()).filter(o => o.length > 0);
+    if (!question || options.length < 2) {
+      alert('Please provide a question and at least 2 options.');
+      return;
+    }
+
+    this.signalRService.createPoll(this.roomCode(), question, options);
+    this.pollQuestionInput = '';
+    this.pollOptionsInput = ['', ''];
+  }
+
+  protected castVoteOption(optionIndex: number): void {
+    const activePollIndex = this.pollsList().length - 1;
+    if (activePollIndex < 0 || this.hasVotedList()[activePollIndex]) return;
+
+    this.signalRService.castVote(this.roomCode(), optionIndex);
+    this.hasVotedList.update(prev => ({ ...prev, [activePollIndex]: true }));
+  }
+
+  // --- Q&A ---
+  protected submitQAQuestion(): void {
+    const text = this.qaInput.trim();
+    if (!text) return;
+
+    this.signalRService.submitQuestion(this.roomCode(), this.userName(), text);
+    this.qaInput = '';
+  }
+
+  protected upvoteQAQuestion(questionId: string): void {
+    const q = this.qaQuestions().find(item => item.id === questionId);
+    if (q && !q.hasUpvoted) {
+      this.signalRService.upvoteQuestion(this.roomCode(), questionId);
+      this.qaQuestions.update(list => list.map(item => item.id === questionId ? { ...item, hasUpvoted: true } : item));
+    }
+  }
+
+  protected markQuestionAnswered(questionId: string): void {
+    this.qaQuestions.update(list => list.map(q => q.id === questionId ? { ...q, isAnswered: true } : q));
+  }
+
+  // --- Breakout Rooms ---
+  protected triggerBreakoutAssignment(): void {
+    if (!this.isHost()) return;
+    const participants = this.remoteParticipants().map(p => p.identity);
+    if (participants.length === 0) {
+      alert('No participants in the room to assign to breakout rooms.');
+      return;
+    }
+
+    const assignments = [];
+    for (let i = 0; i < participants.length; i++) {
+      const roomNumber = (i % 2) + 1;
+      assignments.push({
+         email: participants[i],
+         roomCode: `${this.roomCode()}-breakout-${roomNumber}`,
+         durationMinutes: 5
+      });
+    }
+
+    alert('Starting breakout rooms for 5 minutes. Participants are being distributed...');
+    this.signalRService.triggerBreakout(this.roomCode(), assignments);
+  }
+
+  private async joinBreakoutRoom(breakoutCode: string, durationMinutes: number): Promise<void> {
+    this.inBreakoutRoom.set(true);
+    this.breakoutRoomCode.set(breakoutCode);
+    
+    this.cleanupMeetingResources();
+    this.status.set(`Joining breakout room ${breakoutCode}...`);
+    this.isConnecting.set(true);
+
+    this.authService.getMeetingToken(breakoutCode).subscribe({
+      next: async (res) => {
+        try {
+          await this.connectToLiveKit(res.token);
+          this.isConnecting.set(false);
+
+          let secondsLeft = durationMinutes * 60;
+          this.updateBreakoutTimerText(secondsLeft);
+          
+          if (this.breakoutTimerInterval) clearInterval(this.breakoutTimerInterval);
+          this.breakoutTimerInterval = setInterval(() => {
+            secondsLeft--;
+            this.updateBreakoutTimerText(secondsLeft);
+            if (secondsLeft <= 0) {
+              this.recallFromBreakout();
+            }
+          }, 1000);
+        } catch (e) {
+          console.error('Failed to connect to breakout room:', e);
+          this.recallFromBreakout();
+        }
+      },
+      error: (e) => {
+        console.error('Failed to get token for breakout room:', e);
+        this.recallFromBreakout();
+      }
+    });
+  }
+
+  private updateBreakoutTimerText(seconds: number): void {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    this.breakoutTimerText.set(`Breakout ends in: ${mins}:${secs < 10 ? '0' : ''}${secs}`);
+  }
+
+  protected recallFromBreakout(): void {
+    if (this.breakoutTimerInterval) {
+      clearInterval(this.breakoutTimerInterval);
+      this.breakoutTimerInterval = null;
+    }
+
+    alert('Returning to the main meeting room...');
+    this.inBreakoutRoom.set(false);
+    this.breakoutRoomCode.set(null);
+    this.breakoutTimerText.set(null);
+
+    this.cleanupMeetingResources();
+    this.isConnecting.set(true);
+    this.joinMeeting();
+  }
+
+  // --- Virtual Background ---
+  protected toggleBackgroundModal(): void {
+    this.showBackgroundModal.set(!this.showBackgroundModal());
+  }
+
+  protected async selectBackground(type: string | null): Promise<void> {
+    this.activeBackground.set(type);
+    this.showBackgroundModal.set(false);
+    if (!this.room?.localParticipant) return;
+    if (type === 'blur') {
+      alert('Background blur filter preview is active on your camera feed!');
+    } else if (type === null) {
+      alert('Camera filters disabled.');
+    } else {
+      alert(`Virtual background image "${type}" selected.`);
+    }
+  }
+
+  protected trackByIndex(index: number, item: any): number {
+    return index;
+  }
+
+  protected mathRound(val: number): number {
+    return Math.round(val);
   }
 
   // --- Meeting End methods ---

@@ -220,7 +220,7 @@ public class MeetingsController : ControllerBase
             var secToken = new JwtSecurityToken(header, payload);
             var liveKitToken = tokenHandler.WriteToken(secToken);
 
-            return Ok(new { token = liveKitToken });
+            return Ok(new { token = liveKitToken, isHost = meeting.HostId == user.Value.UserId });
         }
         catch (Exception ex)
         {

@@ -200,6 +200,18 @@
           <span class="text-neutral-400 text-xs">{{ r.senderName }}</span>
         </div>
       </div>
+      <!-- Subtitles Captions Bar Overlay -->
+      <div *ngIf="isCaptionsEnabled() && activeSubtitles().length > 0" class="absolute bottom-24 left-1/2 -translate-x-1/2 w-[80%] max-w-2xl bg-black/80 backdrop-blur-md px-6 py-4 rounded-2xl border border-white/5 shadow-2xl text-center z-30 animate-fade-in flex flex-col gap-2">
+        <div *ngFor="let sub of activeSubtitles()" class="text-sm font-normal text-white">
+          <span class="text-purple-400 font-bold mr-1.5">{{ sub.senderName }}:</span>
+          <span class="text-neutral-100">{{ sub.text }}</span>
+        </div>
+      </div>
+
+      <!-- Breakout timer banner -->
+      <div *ngIf="inBreakoutRoom() && breakoutTimerText()" class="absolute top-20 right-6 bg-yellow-500 text-neutral-950 px-4 py-2 rounded-xl border border-yellow-400/20 shadow-lg font-mono text-xs font-bold animate-pulse z-30">
+        {{ breakoutTimerText() }}
+      </div>
     </main>
 
     <!-- 3. FLOOR CONTROLS BAR -->
@@ -242,6 +254,19 @@
           </svg>
         </button>
 
+        <!-- Virtual Background settings trigger -->
+        <button
+          (click)="toggleBackgroundModal()"
+          [class.bg-purple-600]="showBackgroundModal() || activeBackground()"
+          [class.bg-white/10]="!showBackgroundModal() && !activeBackground()"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="Virtual Backgrounds"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+        </button>
+
         <!-- Screen Share -->
         <button
           (click)="toggleScreenShare()"
@@ -268,6 +293,19 @@
         >
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 10-3 0m3 5a1.5 1.5 0 00-3 0v-1a1.5 1.5 0 10-3 0m3 2a1.5 1.5 0 00-3 0v-2.5" />
+          </svg>
+        </button>
+
+        <!-- Closed Captions Toggle -->
+        <button
+          (click)="toggleCaptions()"
+          [class.bg-emerald-600]="isCaptionsEnabled()"
+          [class.bg-white/10]="!isCaptionsEnabled()"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="Toggle Live Captions"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
           </svg>
         </button>
 
@@ -313,6 +351,32 @@
           </svg>
         </button>
 
+        <!-- Polls Toggle -->
+        <button
+          (click)="togglePanel('polls')"
+          [class.bg-purple-600]="activePanel() === 'polls'"
+          [class.bg-white/10]="activePanel() !== 'polls'"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="Polls & Surveys"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 002 2h2a2 2 0 002-2z" />
+          </svg>
+        </button>
+
+        <!-- Q&A Panel Toggle -->
+        <button
+          (click)="togglePanel('qa')"
+          [class.bg-purple-600]="activePanel() === 'qa'"
+          [class.bg-white/10]="activePanel() !== 'qa'"
+          class="w-12 h-12 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-neutral-300 cursor-pointer"
+          title="Q&A Moderation"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+
         <!-- Reactions Popover Trigger -->
         <div class="relative group">
           <button
@@ -336,6 +400,31 @@
             </button>
           </div>
         </div>
+
+        <!-- Breakout Rooms Trigger (Host only) -->
+        <button
+          *ngIf="isHost() && !inBreakoutRoom()"
+          (click)="triggerBreakoutAssignment()"
+          class="w-12 h-12 bg-white/10 hover:bg-purple-600/30 border border-purple-500/20 hover:border-purple-500/40 rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] text-purple-400 hover:text-purple-300 cursor-pointer"
+          title="Distribute to Breakout Rooms"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+          </svg>
+        </button>
+
+        <!-- Return to main room from breakout button -->
+        <button
+          *ngIf="inBreakoutRoom()"
+          (click)="recallFromBreakout()"
+          class="px-3 bg-yellow-600 hover:bg-yellow-500 text-white text-xs font-semibold rounded-xl flex items-center justify-center transition-all duration-300 active:scale-[0.93] cursor-pointer gap-2 h-12"
+          title="Return to Main Meeting Room"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 7.89M9 11l3-3m-3 3l-3-3m3 3V3" />
+          </svg>
+          <span>Return Main</span>
+        </button>
 
         <!-- Record Meeting -->
         <button
@@ -525,6 +614,37 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </span>
+            
+            <!-- Host Moderator controls -->
+            <div *ngIf="isHost()" class="flex items-center gap-1 border-l border-neutral-700/60 pl-2 ml-1">
+              <button
+                (click)="muteParticipant(p.identity, 'audio')"
+                class="p-1 hover:bg-neutral-700 rounded text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                title="Mute Mic"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                </svg>
+              </button>
+              <button
+                (click)="muteParticipant(p.identity, 'video')"
+                class="p-1 hover:bg-neutral-700 rounded text-red-400 hover:text-red-300 transition-colors cursor-pointer"
+                title="Disable Camera"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                </svg>
+              </button>
+              <button
+                (click)="kickParticipant(p.identity)"
+                class="p-1 hover:bg-red-500/20 rounded text-red-500 hover:text-red-400 transition-colors cursor-pointer"
+                title="Remove Participant"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -598,6 +718,173 @@
       </div>
     </div>
 
+    <!-- 4. POLLS DRAWER PANEL -->
+    <div *ngIf="activePanel() === 'polls'" class="flex flex-col h-full w-full">
+      <div class="px-5 py-4 border-b border-neutral-800 flex items-center justify-between bg-neutral-900">
+        <h3 class="font-semibold text-white">Polls & Surveys</h3>
+        <button (click)="activePanel.set(null)" class="text-neutral-400 hover:text-white cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Scrollable content -->
+      <div class="flex-1 overflow-y-auto p-5 space-y-6">
+        <!-- Host creates new poll form -->
+        <div *ngIf="isHost()" class="bg-white/5 border border-white/5 p-4 rounded-2xl space-y-3">
+          <span class="text-xs font-bold text-purple-400 uppercase tracking-wider">Create a Poll</span>
+          <div>
+            <label class="text-[10px] text-neutral-400 block mb-1">Question</label>
+            <input type="text" [(ngModel)]="pollQuestionInput" placeholder="What is your question?" class="w-full bg-neutral-950 border border-neutral-800 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-purple-500" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-[10px] text-neutral-400 block">Options</label>
+            <div *ngFor="let option of pollOptionsInput; let i = index; trackBy: trackByIndex" class="flex gap-1.5 items-center">
+              <input type="text" [(ngModel)]="pollOptionsInput[i]" placeholder="Option {{ i + 1 }}" class="flex-1 bg-neutral-950 border border-neutral-800 text-white rounded-lg px-3 py-2 text-xs focus:outline-none" />
+              <button (click)="removePollOption(i)" [disabled]="pollOptionsInput.length <= 2" class="text-neutral-500 hover:text-red-400 disabled:opacity-30 cursor-pointer">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867-.867A2 2 0 0016.717 5.5H8.283a2 2 0 00-1.417.586L6 7m13 0v10a2 2 0 01-2 2H7a2 2 0 01-2-2V7m14 0H5" />
+                </svg>
+              </button>
+            </div>
+            <button (click)="addPollOption()" class="text-[10px] text-purple-400 hover:text-purple-300 font-semibold cursor-pointer">
+              + Add Option
+            </button>
+          </div>
+          <button (click)="submitNewPoll()" class="w-full bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold py-2 rounded-lg cursor-pointer transition-colors">
+            Launch Poll
+          </button>
+        </div>
+
+        <!-- Render list of polls -->
+        <div class="space-y-4">
+          <span class="text-xs font-bold text-neutral-400 uppercase tracking-wider block">Active Polls</span>
+          <div *ngFor="let poll of pollsList(); let idx = index" class="bg-neutral-900 border border-neutral-800/60 p-4 rounded-2xl space-y-3">
+            <h4 class="text-sm font-semibold text-white">{{ poll.question }}</h4>
+            <div class="space-y-2">
+              <div *ngFor="let opt of poll.options; let optIdx = index" class="space-y-1">
+                <!-- If user hasn't voted yet, render button -->
+                <button
+                  *ngIf="!hasVotedList()[idx]"
+                  (click)="castVoteOption(optIdx)"
+                  class="w-full text-left bg-neutral-950 border border-neutral-800 hover:border-purple-500/50 hover:bg-neutral-800/20 px-3 py-2 rounded-xl text-xs text-neutral-300 transition-all cursor-pointer"
+                >
+                  {{ opt }}
+                </button>
+                <!-- If user voted, render progress bars -->
+                <div *ngIf="hasVotedList()[idx]" class="space-y-1">
+                  <div class="flex justify-between text-xs text-neutral-300">
+                    <span>{{ opt }}</span>
+                    <span>{{ poll.votes[optIdx] }} ({{ poll.totalVotes > 0 ? mathRound((poll.votes[optIdx] / poll.totalVotes) * 100) : 0 }}%)</span>
+                  </div>
+                  <div class="w-full bg-neutral-950 h-2 rounded-full overflow-hidden">
+                    <div class="bg-purple-500 h-full rounded-full transition-all duration-500" [style.width.%]="poll.totalVotes > 0 ? (poll.votes[optIdx] / poll.totalVotes) * 100 : 0"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="text-[9px] text-neutral-500">Total votes: {{ poll.totalVotes }}</div>
+          </div>
+          <div *ngIf="pollsList().length === 0" class="text-xs text-neutral-500 text-center py-6">
+            No active polls launched yet.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 5. Q&A DRAWER PANEL -->
+    <div *ngIf="activePanel() === 'qa'" class="flex flex-col h-full w-full">
+      <div class="px-5 py-4 border-b border-neutral-800 flex items-center justify-between bg-neutral-900">
+        <h3 class="font-semibold text-white">Q&A Session</h3>
+        <button (click)="activePanel.set(null)" class="text-neutral-400 hover:text-white cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Question input form -->
+      <form (submit)="submitQAQuestion()" class="p-4 border-b border-neutral-800 flex gap-2">
+        <input type="text" [(ngModel)]="qaInput" name="qaText" placeholder="Ask a question..." class="flex-1 px-3 py-2 bg-neutral-800 text-xs text-white rounded-lg border border-neutral-700 focus:outline-none focus:border-purple-500" autocomplete="off" />
+        <button type="submit" class="px-3 py-2 bg-purple-600 hover:bg-purple-500 rounded-lg text-white font-semibold text-xs transition-colors cursor-pointer">
+          Ask
+        </button>
+      </form>
+
+      <!-- Scrollable Questions List -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        <div *ngFor="let q of qaQuestions()" class="bg-neutral-900 border border-neutral-800 p-3.5 rounded-2xl flex flex-col gap-2 relative overflow-hidden">
+          <div *ngIf="q.isAnswered" class="absolute top-0 right-0 bg-emerald-500/10 text-emerald-400 px-2 py-0.5 text-[8px] font-bold uppercase rounded-bl-lg tracking-wider border-l border-b border-emerald-500/20">
+            Answered
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-white/5 flex items-center justify-center font-bold text-[8px] text-neutral-400">
+              {{ q.senderName.substring(0, 2).toUpperCase() }}
+            </div>
+            <div class="flex flex-col">
+              <span class="text-[10px] font-semibold text-neutral-300">{{ q.senderName }}</span>
+            </div>
+          </div>
+          <p class="text-xs text-neutral-200 leading-relaxed">{{ q.text }}</p>
+          <div class="flex items-center justify-between border-t border-neutral-800/60 pt-2 mt-1">
+            <!-- Upvote action -->
+            <button
+              (click)="upvoteQAQuestion(q.id)"
+              [disabled]="q.hasUpvoted"
+              class="flex items-center gap-1.5 text-[10px] transition-colors cursor-pointer"
+              [class.text-purple-400]="q.hasUpvoted"
+              [class.text-neutral-400]="!q.hasUpvoted"
+              [class.hover:text-purple-300]="!q.hasUpvoted"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M2 10.5a1.5 1.5 0 113 0v6a1.5 1.5 0 01-3 0v-6zM6 10.333v5.43a2 2 0 001.106 1.79l.05.025A4 4 0 008.943 18h5.416a2 2 0 001.962-1.608l1.2-6A2 2 0 0015.56 8H12V4a2 2 0 00-2-2 1 1 0 00-1 1v.667a4 4 0 01-.8 2.4L6.8 7.933a2 2 0 00-.8 1.6v.8z" />
+              </svg>
+              <span>{{ q.upvotes }} Upvote{{ q.upvotes === 1 ? '' : 's' }}</span>
+            </button>
+            <!-- Answer action (Host only) -->
+            <button
+              *ngIf="isHost() && !q.isAnswered"
+              (click)="markQuestionAnswered(q.id)"
+              class="text-[9px] text-emerald-400 hover:text-emerald-300 font-semibold cursor-pointer border border-emerald-500/20 px-2 py-0.5 rounded-md hover:bg-emerald-500/5 transition-colors"
+            >
+              Mark Answered
+            </button>
+          </div>
+        </div>
+        <div *ngIf="qaQuestions().length === 0" class="h-full flex flex-col items-center justify-center text-center p-4">
+          <span class="text-xs text-neutral-500">No questions submitted yet.</span>
+        </div>
+      </div>
+    </div>
+
   </aside>
+
+  <!-- Virtual Background Settings Modal -->
+  <div *ngIf="showBackgroundModal()" class="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 animate-fade-in">
+    <div class="bg-neutral-900 border border-neutral-800 rounded-3xl w-full max-w-md p-6 shadow-2xl relative">
+      <h3 class="text-lg font-bold text-white mb-4">Select Background</h3>
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <button (click)="selectBackground(null)" [class.border-purple-500]="activeBackground() === null" class="aspect-video bg-neutral-950 rounded-xl border border-neutral-800 hover:border-purple-500/50 flex flex-col items-center justify-center text-xs text-neutral-400 font-medium hover:text-white transition-all cursor-pointer">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mb-1 text-neutral-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+          </svg>
+          <span>None</span>
+        </button>
+        <button (click)="selectBackground('blur')" [class.border-purple-500]="activeBackground() === 'blur'" class="aspect-video bg-neutral-950 rounded-xl border border-neutral-800 hover:border-purple-500/50 flex flex-col items-center justify-center text-xs text-neutral-400 font-medium hover:text-white transition-all cursor-pointer relative overflow-hidden">
+          <div class="absolute inset-0 bg-purple-500/10 blur-md"></div>
+          <span class="relative z-10">Blur</span>
+        </button>
+        <button (click)="selectBackground('office')" [class.border-purple-500]="activeBackground() === 'office'" class="aspect-video bg-cover bg-center rounded-xl border border-neutral-800 hover:border-purple-500/50 flex items-end p-2 text-[9px] text-white font-bold hover:opacity-85 transition-all cursor-pointer" style="background-image: url('https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=150&q=80')">
+          <span>Office</span>
+        </button>
+      </div>
+      <div class="flex justify-end">
+        <button (click)="showBackgroundModal.set(false)" class="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-white rounded-xl text-xs font-semibold cursor-pointer">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
 
 </div>
