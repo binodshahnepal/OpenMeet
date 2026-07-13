@@ -4,7 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../core/services/auth.service';
 import { SignalRService, ChatMessage, ReactionEvent } from '../core/services/signalr.service';
-import { Room, RoomEvent, RemoteParticipant, Track } from 'livekit-client';
+import { Room, RoomEvent, RemoteParticipant, Track, VideoTrack, LocalVideoTrack } from 'livekit-client';
 
 interface ParticipantState {
   identity: string;
@@ -217,7 +217,18 @@ export class MeetingRoomComponent implements OnInit, OnDestroy, AfterViewChecked
       .on(RoomEvent.TrackMuted, () => this.updateParticipantsList())
       .on(RoomEvent.TrackUnmuted, () => this.updateParticipantsList())
       .on(RoomEvent.TrackPublished, () => this.updateParticipantsList())
-      .on(RoomEvent.TrackUnpublished, () => this.updateParticipantsList());
+      .on(RoomEvent.TrackUnpublished, () => this.updateParticipantsList())
+      .on(RoomEvent.LocalTrackPublished, (publication) => {
+        if (publication.track?.kind === Track.Kind.Video && publication.track?.source === Track.Source.Camera) {
+          const videoTrack = publication.track as VideoTrack;
+          setTimeout(() => {
+            if (this.localVideoElement?.nativeElement) {
+              videoTrack.attach(this.localVideoElement.nativeElement);
+            }
+          }, 200);
+        }
+        this.updateParticipantsList();
+      });
 
     const livekitUrl = 'ws://localhost:7880';
     await this.room.connect(livekitUrl, token);
